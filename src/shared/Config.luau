@@ -9,6 +9,13 @@ local Config = {
     UpgradeCost = 25,
     DoublePickupMultiplier = 2,
 
+    -- Sonidos de los cristales
+    PositivePickupSoundId = "rbxassetid://120891770644830",
+    NegativePickupSoundId = "rbxassetid://116107826564721",
+
+    PickupSoundVolume = 0.8,
+    PickupSoundMaxDistance = 35,
+
     -- Monetización: los IDs se configurarán más adelante.
     GamePassDoubleCoinsId = 0,
     CoinPackProductId = 0,

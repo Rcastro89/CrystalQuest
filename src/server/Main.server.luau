@@ -172,6 +172,39 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(
 -- 5. RECOMPENSAS
 -- =========================================================
 
+-- =========================================================
+-- SONIDO DE RECOLECCIÓN
+-- =========================================================
+
+local function playPickupSound(
+    position: Vector3,
+    isPositive: boolean
+)
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "PickupSoundAttachment"
+    attachment.Position = position
+    attachment.Parent = Workspace.Terrain
+
+    local sound = Instance.new("Sound")
+    sound.Name = "PickupSound"
+
+    if isPositive then
+        sound.SoundId = Config.PositivePickupSoundId
+    else
+        sound.SoundId = Config.NegativePickupSoundId
+    end
+
+    sound.Volume = Config.PickupSoundVolume
+    sound.RollOffMaxDistance = Config.PickupSoundMaxDistance
+    sound.Parent = attachment
+
+    sound.Ended:Connect(function()
+        attachment:Destroy()
+    end)
+
+    sound:Play()
+end
+
 local function awardCoins(player: Player, isPositive: boolean)
     local data = DataService.Get(player)
 
@@ -269,6 +302,8 @@ createPickup = function(position: Vector3)
         -- Touched puede activarse varias veces por el mismo personaje.
         -- Reclamamos el cristal antes de modificar el saldo.
         claimed = true
+        
+        playPickupSound(orb.Position, isPositive)
 
         awardCoins(player, isPositive)
         orb:Destroy()
