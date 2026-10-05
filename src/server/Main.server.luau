@@ -172,7 +172,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(
 -- 5. RECOMPENSAS
 -- =========================================================
 
-local function awardCoins(player: Player)
+local function awardCoins(player: Player, isPositive: boolean)
     local data = DataService.Get(player)
 
     if not data then
@@ -186,6 +186,12 @@ local function awardCoins(player: Player)
     end
 
     local amount = Config.BasePickupReward * multiplier
+
+    if not isPositive then
+        amount = -amount
+    end
+
+    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " isPositive: " .. tostring(isPositive))
 
     if DataService.AddCoins(player, amount) then
         updateLeaderstats(player)
@@ -213,6 +219,8 @@ local pickupPositions: {Vector3} = {
 local createPickup: (Vector3) -> ()
 
 createPickup = function(position: Vector3)
+    local isPositive = math.random(1, 2) == 1
+    
     local orb = Instance.new("Part")
     orb.Name = "Crystal"
     orb.Shape = Enum.PartType.Ball
@@ -222,7 +230,7 @@ createPickup = function(position: Vector3)
     orb.CanCollide = false
     orb.CanTouch = true
     orb.Material = Enum.Material.Neon
-    orb.Color = Color3.fromRGB(70, 200, 255)
+    orb.Color = isPositive and Color3.fromRGB(70, 200, 255) or Color3.fromRGB(255, 70, 70)
 
     local claimed = false
 
@@ -262,7 +270,7 @@ createPickup = function(position: Vector3)
         -- Reclamamos el cristal antes de modificar el saldo.
         claimed = true
 
-        awardCoins(player)
+        awardCoins(player, isPositive)
         orb:Destroy()
 
         task.delay(Config.PickupRespawnSeconds, function()

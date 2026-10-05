@@ -46,7 +46,7 @@ local function makeLabel(
     label.Position = position
     label.Size = size
     label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextColor3 = Color3.new(0.807843, 0.105882, 0.105882)
     label.TextScaled = true
     label.Parent = panel
 

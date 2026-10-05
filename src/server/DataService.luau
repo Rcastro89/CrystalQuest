@@ -131,7 +131,7 @@ function DataService.AddCoins(
 
     local data = sessions[player]
 
-    if not data or amount <= 0 then
+    if not data then
         return false
     end
 
