@@ -11,6 +11,12 @@ local Config = {
     NegativePickupSoundId = "rbxassetid://116107826564721",
     PickupSoundVolume = 0.8,
     PickupSoundMaxDistance = 35,
+    -- Física de los cristales
+    CrystalDensity = 0.5,
+    CrystalFriction = 0.2,
+    CrystalElasticity = 0.8,
+    CrystalBounceVelocity = 18,
+    CrystalDestroyDelay = 0.35,
     -- Monetización: los IDs se configurarán más adelante.
     GamePassDoubleCoinsId = 0,
     CoinPackProductId = 0,

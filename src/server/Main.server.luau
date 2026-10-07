@@ -228,68 +228,116 @@ end;
 -- =========================================================
 -- 6. GENERACIÓN Y RECOLECCIÓN DE CRISTALES
 -- =========================================================
-local function isLandingOnOrb(
-    rootPart: BasePart,
-    orb: BasePart
-): boolean
+local function isFootPart(part: BasePart): boolean
+    local name = part.Name;
 
-    local verticalVelocity = rootPart.AssemblyLinearVelocity.Y;
-
-    -- El personaje debe estar descendiendo.
-    if verticalVelocity > -1 then
-        return false;
-    end;
-
-    local raycastParams = RaycastParams.new();
-    raycastParams.FilterType = Enum.RaycastFilterType.Include;
-    raycastParams.FilterDescendantsInstances = { orb };
-
-    -- Comprobamos que el cristal esté directamente debajo
-    -- del personaje.
-    local raycastDirection = Vector3.new(0, -8, 0);
-
-    local result = Workspace:Raycast(
-        rootPart.Position,
-        raycastDirection,
-        raycastParams
-    );
-
-    return result ~= nil;
+    return name == "LeftFoot"
+        or name == "RightFoot"
+        or name == "LeftLowerLeg"
+        or name == "RightLowerLeg"
+        or name == "Left Leg"
+        or name == "Right Leg";
 end;
 
-local pickupPositions: { Vector3 } = {
-    Vector3.new(-20, 2, -10),
-    Vector3.new(-10, 2, -10),
-    Vector3.new(0, 2, -10),
-    Vector3.new(10, 2, -10),
-    Vector3.new(20, 2, -10),
-    Vector3.new(-20, 2, 10),
-    Vector3.new(-10, 2, 10),
-    Vector3.new(0, 2, 10),
-    Vector3.new(10, 2, 10),
-    Vector3.new(20, 2, 10),
-};
+local pickupPositions: { Vector3 } = {}
+
+local TOTAL_ITEMS: number = 10
+local MIN_DISTANCE: number = 7 -- Distancia mínima entre monedas/objetos en studs
+local MAX_ATTEMPTS: number = 100 -- Límite para evitar bucles infinitos si el área se llena
+
+for i = 1, TOTAL_ITEMS do
+    local newPos: Vector3
+    local isValid: boolean = false
+    local attempts: number = 0
+
+    repeat
+        attempts += 1
+        local x = math.random(-30, 30)
+        local z = math.random(-30, 30)
+        newPos = Vector3.new(x, 2, z)
+
+        -- Asumimos que es válida hasta que se demuestre lo contrario
+        isValid = true
+
+        for _, existingPos in ipairs(pickupPositions) do
+            -- (v1 - v2).Magnitude calcula la distancia en studs entre dos vectores
+            if (newPos - existingPos).Magnitude < MIN_DISTANCE then
+                isValid = false
+                break -- Está muy cerca de una existente, descartar y reintentar
+            end
+        end
+    until isValid or attempts >= MAX_ATTEMPTS
+
+    if isValid then
+        table.insert(pickupPositions, newPos)
+    else
+        warn("No se encontró una posición libre tras " .. MAX_ATTEMPTS .. " intentos.")
+    end
+end
 
 local createPickup: (Vector3) -> ();
 
 createPickup = function(position: Vector3)
     local isPositive = math.random(1, 2) == 1;
 
+    -- =====================================================
+    -- ORBE FÍSICO
+    -- =====================================================
     local orb = Instance.new("Part");
     orb.Name = "Crystal";
-    orb.Shape = Enum.PartType.Ball;
-    orb.Size = Vector3.new(2, 2, 2);
+    orb.Shape = Enum.PartType.Block;
+    orb.Size = Vector3.new(4, 4, 4);
     orb.Position = position;
+
+    -- El orbe es sólido, pero permanece fijo hasta que
+    -- un jugador lo recoge correctamente.
     orb.Anchored = true;
     orb.CanCollide = true;
     orb.CanTouch = true;
     orb.CanQuery = true;
+
     orb.Material = Enum.Material.Neon;
-    orb.Color = isPositive and Color3.fromRGB(70, 200, 255) or Color3.fromRGB(255, 70, 70);
+
+    orb.Color = isPositive
+        and Color3.fromRGB(70, 200, 255)
+        or Color3.fromRGB(255, 70, 70);
+
+    orb.CustomPhysicalProperties = PhysicalProperties.new(
+        Config.CrystalDensity,
+        Config.CrystalFriction,
+        Config.CrystalElasticity
+    );
+
+    orb.Parent = Workspace;
+
+    -- =====================================================
+    -- SENSOR INVISIBLE
+    -- =====================================================
+    local sensor = Instance.new("Part");
+    sensor.Name = "CrystalLandingSensor";
+
+    -- Un poco más pequeño que el cristal para exigir
+    -- que el jugador caiga aproximadamente sobre su centro.
+    sensor.Size = Vector3.new(1.6, 0.25, 1.6);
+
+    -- El sensor queda justo encima del cristal.
+    sensor.Position = position + Vector3.new(0, 2, 0);
+
+    sensor.Anchored = true;
+    sensor.CanCollide = false;
+    sensor.CanTouch = true;
+    sensor.CanQuery = false;
+
+    -- El jugador no debe poder ver este objeto.
+    --sensor.Transparency = 1;
+    sensor.Parent = Workspace;
 
     local claimed = false;
 
-    orb.Touched:Connect(function(hit: BasePart)
+    -- =====================================================
+    -- DETECCIÓN DEL ATERRIZAJE
+    -- =====================================================
+    sensor.Touched:Connect(function(hit: BasePart)
         if claimed then
             return;
         end;
@@ -317,29 +365,88 @@ createPickup = function(position: Vector3)
             return;
         end;
 
-        if (rootPart.Position - orb.Position).Magnitude > 8 then
+        local foot = isFootPart(hit);
+        print(foot and "Tocó un pie" or "Tocó otra parte del cuerpo");
+        if not foot then
             return;
         end;
 
-        if not isLandingOnOrb(rootPart, orb) then
+        -- El sensor no tiene colisión física, así que aquí
+        -- podemos comprobar la velocidad sin que el contacto
+        -- con el sensor haya alterado la física del jugador.
+        local verticalVelocity = rootPart.AssemblyLinearVelocity.Y;
+
+        if verticalVelocity > 0 then
             return;
         end;
 
-        -- Touched puede activarse varias veces por el mismo personaje.
-        -- Reclamamos el cristal antes de modificar el saldo.
+        -- Comprobamos que el jugador esté horizontalmente
+        -- encima del cristal.
+        local horizontalOffset = Vector3.new(
+            rootPart.Position.X - orb.Position.X,
+            0,
+            rootPart.Position.Z - orb.Position.Z
+        );
+
+        if horizontalOffset.Magnitude > 2 then
+            return;
+        end;
+
+        -- =================================================
+        -- RECOLECCIÓN VÁLIDA
+        -- =================================================
         claimed = true;
 
+        -- Ya no necesitamos el sensor.
+        sensor:Destroy();
+
+        -- Sonido y recompensa.
         playPickupSound(orb.Position, isPositive);
-
         awardCoins(player, isPositive);
-        orb:Destroy();
 
-        task.delay(Config.PickupRespawnSeconds, function()
-            createPickup(position);
+        -- =================================================
+        -- REBOTE DEL ORBE
+        -- =================================================
+
+        -- A partir de aquí el orbe deja de ser estático
+        -- y pasa a formar parte de la simulación física.
+        orb.Anchored = false;
+
+        -- El servidor mantiene la autoridad física.
+        orb:SetNetworkOwner(nil);
+
+        -- Evitamos que el jugador pueda empujarlo lateralmente
+        -- mientras dura la pequeña animación de rebote.
+        orb.CanCollide = false;
+
+        local desiredVelocity = Vector3.new(
+            0,
+            Config.CrystalBounceVelocity,
+            0
+        );
+
+        local impulse = desiredVelocity * orb.AssemblyMass;
+
+        orb:ApplyImpulse(impulse);
+
+        -- =================================================
+        -- ELIMINACIÓN Y RESPAWN
+        -- =================================================
+        task.delay(Config.CrystalDestroyDelay, function()
+            if orb.Parent then
+                orb:Destroy();
+            end;
         end);
-    end);
 
-    orb.Parent = Workspace;
+        task.delay(
+            Config.CrystalDestroyDelay
+                + Config.PickupRespawnSeconds,
+            function()
+
+                createPickup(position);
+            end
+        );
+    end);
 end;
 
 for _, position in pickupPositions do
