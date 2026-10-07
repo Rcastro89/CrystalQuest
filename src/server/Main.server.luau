@@ -283,7 +283,7 @@ createPickup = function(position: Vector3)
     orb.Anchored = true;
     orb.CanCollide = true;
     orb.CanTouch = true;
-    orb.CanQuery = true
+    orb.CanQuery = true;
     orb.Material = Enum.Material.Neon;
     orb.Color = isPositive and Color3.fromRGB(70, 200, 255) or Color3.fromRGB(255, 70, 70);
 
