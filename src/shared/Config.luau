@@ -2,7 +2,7 @@
 local Config = {
     -- Sistema de recolección
     BasePickupReward = 5,
-    PickupRespawnSeconds = 4,
+    SecondsPerBlueCrystal = 5,
     -- Mejora comprada con monedas
     UpgradeCost = 25,
     DoublePickupMultiplier = 2,

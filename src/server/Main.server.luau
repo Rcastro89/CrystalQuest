@@ -9,6 +9,7 @@ local Config = require(
 );
 
 local DataService = require(script.Parent.DataService);
+local RoundService = require(script.Parent.RoundService);
 
 type PurchaseResult = {
     ok: boolean,
@@ -239,46 +240,54 @@ local function isFootPart(part: BasePart): boolean
         or name == "Right Leg";
 end;
 
-local pickupPositions: { Vector3 } = {}
+local pickupPositions: { Vector3 } = {};
 
-local TOTAL_ITEMS: number = 10
-local MIN_DISTANCE: number = 7 -- Distancia mínima entre monedas/objetos en studs
-local MAX_ATTEMPTS: number = 100 -- Límite para evitar bucles infinitos si el área se llena
+local TOTAL_ITEMS: number = 10;
+local MIN_DISTANCE: number = 7; -- Distancia mínima entre monedas/objetos en studs
+local MAX_ATTEMPTS: number = 100; -- Límite para evitar bucles infinitos si el área se llena
+local totalBlueCrystals: number = 0;
 
 for i = 1, TOTAL_ITEMS do
-    local newPos: Vector3
-    local isValid: boolean = false
-    local attempts: number = 0
+    local newPos: Vector3;
+    local isValid: boolean = false;
+    local attempts: number = 0;
 
     repeat
-        attempts += 1
-        local x = math.random(-30, 30)
-        local z = math.random(-30, 30)
-        newPos = Vector3.new(x, 2, z)
+        attempts += 1;
+        local x = math.random(-30, 30);
+        local z = math.random(-30, 30);
+        newPos = Vector3.new(x, 2, z);
 
         -- Asumimos que es válida hasta que se demuestre lo contrario
-        isValid = true
+        isValid = true;
 
         for _, existingPos in ipairs(pickupPositions) do
             -- (v1 - v2).Magnitude calcula la distancia en studs entre dos vectores
             if (newPos - existingPos).Magnitude < MIN_DISTANCE then
-                isValid = false
-                break -- Está muy cerca de una existente, descartar y reintentar
-            end
-        end
-    until isValid or attempts >= MAX_ATTEMPTS
+                isValid = false;
+                break; -- Está muy cerca de una existente, descartar y reintentar
+            end;
+        end;
+    until isValid or attempts >= MAX_ATTEMPTS;
 
     if isValid then
-        table.insert(pickupPositions, newPos)
+        table.insert(pickupPositions, newPos);
     else
-        warn("No se encontró una posición libre tras " .. MAX_ATTEMPTS .. " intentos.")
-    end
-end
+        warn("No se encontró una posición libre tras " .. MAX_ATTEMPTS .. " intentos.");
+    end;
+end;
 
-local createPickup: (Vector3) -> ();
+local createPickup: (Vector3, boolean?) -> ();
 
-createPickup = function(position: Vector3)
-    local isPositive = math.random(1, 2) == 1;
+createPickup = function(
+    position: Vector3,
+    forcePositive: boolean?
+)
+    local isPositive = forcePositive and true or math.random(1, 2) == 1;
+
+    if isPositive then
+        totalBlueCrystals += 1;
+    end;
 
     -- =====================================================
     -- ORBE FÍSICO
@@ -342,6 +351,10 @@ createPickup = function(position: Vector3)
             return;
         end;
 
+        if not RoundService.IsActive() then
+            return;
+        end;
+
         local character = hit:FindFirstAncestorOfClass("Model");
 
         if not character then
@@ -400,6 +413,7 @@ createPickup = function(position: Vector3)
         -- Ya no necesitamos el sensor.
         sensor:Destroy();
 
+        RoundService.RegisterCrystalCollected(isPositive);
         -- Sonido y recompensa.
         playPickupSound(orb.Position, isPositive);
         awardCoins(player, isPositive);
@@ -438,20 +452,18 @@ createPickup = function(position: Vector3)
             end;
         end);
 
-        task.delay(
-            Config.CrystalDestroyDelay
-                + Config.PickupRespawnSeconds,
-            function()
-
-                createPickup(position);
-            end
-        );
     end);
 end;
 
-for _, position in pickupPositions do
-    createPickup(position);
+for index, position in pickupPositions do
+    -- Si llegamos al último cristal y todavía no existe
+    -- ningún azul, forzamos ese último cristal a ser azul.
+    local forcePositive = index == #pickupPositions and totalBlueCrystals == 0;
+
+    createPickup(position, forcePositive);
 end;
+
+RoundService.Start(totalBlueCrystals);
 
 -- =========================================================
 -- 7. COMPRA DE MEJORA CON MONEDAS

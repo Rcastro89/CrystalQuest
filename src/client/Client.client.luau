@@ -26,7 +26,7 @@ gui.Parent = playerGui;
 
 local panel = Instance.new("Frame");
 panel.Name = "Panel";
-panel.Size = UDim2.fromOffset(320, 246);
+panel.Size = UDim2.fromOffset(320, 320);
 panel.Position = UDim2.fromOffset(20, 20);
 panel.BackgroundColor3 = Color3.fromRGB(32, 38, 52);
 panel.Parent = gui;
@@ -70,37 +70,105 @@ local function makeButton(
     return button;
 end;
 
-local coinsLabel = makeLabel(
-    "CoinsLabel",
-    "Monedas: ...",
+local objectiveLabel = makeLabel(
+    "ObjectiveLabel",
+    "Cristales azules: ...",
     UDim2.fromOffset(12, 8),
+    UDim2.new(1, -24, 0, 28)
+);
+
+local timerLabel = makeLabel(
+    "TimerLabel",
+    "Tiempo: ...",
+    UDim2.fromOffset(12, 36),
     UDim2.new(1, -24, 0, 34)
 );
 
+local coinsLabel = makeLabel(
+    "CoinsLabel",
+    "Monedas: ...",
+    UDim2.fromOffset(12, 70),
+    UDim2.new(1, -24, 0, 34)
+);
 local upgradeButton = makeButton(
     "UpgradeButton",
     "Mejora x2 (25 monedas)",
-    50
+    110
 );
 
 local productButton = makeButton(
     "ProductButton",
     "Comprar 100 monedas",
-    92
+    152
 );
 
 local passButton = makeButton(
     "PassButton",
     "Comprar Game Pass x2",
-    134
+    194
 );
 
 local statusLabel = makeLabel(
     "StatusLabel",
-    "¡Recoge cristales!",
-    UDim2.fromOffset(12, 178),
-    UDim2.new(1, -24, 0, 46)
+    "¡Recoge todos los cristales azules!",
+    UDim2.fromOffset(12, 238),
+    UDim2.new(1, -24, 0, 60)
 );
+
+
+local gameState = ReplicatedStorage:WaitForChild("GameState");
+
+local timeRemaining = gameState:WaitForChild(
+    "TimeRemaining"
+) :: IntValue;
+
+local blueRemaining = gameState:WaitForChild(
+    "BlueRemaining"
+) :: IntValue;
+
+local roundStatus = gameState:WaitForChild(
+    "Status"
+) :: StringValue;
+
+local function updateRoundUI()
+    objectiveLabel.Text =
+        "Cristales azules: "
+            .. tostring(blueRemaining.Value);
+
+    timerLabel.Text =
+        "Tiempo: "
+            .. tostring(timeRemaining.Value);
+
+    if roundStatus.Value == "Waiting" then
+
+        statusLabel.Text =
+            "Preparando la ronda...";
+
+    elseif roundStatus.Value == "Playing" then
+
+        statusLabel.Text =
+            "¡Recoge todos los cristales azules!";
+
+    elseif roundStatus.Value == "Won" then
+
+        statusLabel.Text =
+            "¡GANASTE! Recogiste todos los cristales azules.";
+
+    elseif roundStatus.Value == "Lost" then
+
+        statusLabel.Text =
+            "¡PERDISTE! Se acabó el tiempo.";
+
+    end;
+end;
+
+timeRemaining.Changed:Connect(updateRoundUI);
+
+blueRemaining.Changed:Connect(updateRoundUI);
+
+roundStatus.Changed:Connect(updateRoundUI);
+
+updateRoundUI();
 
 -- =========================================================
 -- 2. ACTUALIZACIÓN DEL SALDO
