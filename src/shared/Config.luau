@@ -1,7 +1,10 @@
 --!strict
+export type CrystalType = "Blue" | "Yellow" | "Red"
+
 local Config = {
     -- Sistema de recolección
-    BasePickupReward = 5,
+    BluePickupReward = 5,
+    YellowPickupReward = 2,
     SecondsPerBlueCrystal = 5,
     SecondsPerYellowCrystal = 2,
     TotalPickups = 10,

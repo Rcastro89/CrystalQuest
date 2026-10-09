@@ -8,6 +8,7 @@ local Config = require(
     ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 );
 
+type CrystalType = Config.CrystalType;
 local DataService = require(script.Parent.DataService);
 local RoundService = require(script.Parent.RoundService);
 
@@ -200,7 +201,7 @@ local function playPickupSound(
     sound:Play();
 end;
 
-local function awardCoins(player: Player, orbType: number)
+local function awardCoins(player: Player, crystalType: CrystalType)
     local data = DataService.Get(player);
 
     if not data then
@@ -213,15 +214,15 @@ local function awardCoins(player: Player, orbType: number)
         multiplier *= 2;
     end;
 
-    local amount = Config.BasePickupReward * multiplier;
+    local amount = Config.BluePickupReward * multiplier;
 
-    if orbType == 3 then
+    if crystalType == "Red" then
         amount = -amount;
-    elseif orbType == 2 then
-        amount = amount / 2;
+    elseif crystalType == "Yellow" then
+        amount = Config.YellowPickupReward * multiplier;
     end;
 
-    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " orbType: " .. tostring(orbType));
+    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " crystalType: " .. tostring(crystalType));
 
     if DataService.AddCoins(player, amount) then
         updateLeaderstats(player);
@@ -280,14 +281,14 @@ for i = 1, TOTAL_ITEMS do
     end;
 end;
 
-local function validRecolet(orb: Part, player: Player, orbType: number)
+local function validRecolet(orb: Part, player: Player, crystalType: CrystalType)
     -- =================================================
     -- RECOLECCIÓN VÁLIDA
     -- =================================================
-    RoundService.RegisterCrystalCollected(orbType);
+    RoundService.RegisterCrystalCollected(crystalType);
     -- Sonido y recompensa.
-    playPickupSound(orb.Position, orbType ~= 3);
-    awardCoins(player, orbType);
+    playPickupSound(orb.Position, crystalType ~= "Red");
+    awardCoins(player, crystalType);
 
     -- =================================================
     -- REBOTE DEL ORBE
@@ -363,20 +364,28 @@ local createPickup: (Vector3, boolean?) -> ();
 
 createPickup = function(
     position: Vector3,
-    forcePositive: boolean?
+    forceBlue: boolean?
 )
-    local orbType = math.random(1, 3);
-    local isSpecial = forcePositive and true or orbType == 1;
-    local isNormal = orbType == 2;
-    local isNegative = orbType == 3;
+    local crystalType: CrystalType
 
-    if isSpecial then
-        totalBlueCrystals += 1;
-    end;
+    if forceBlue == true then
+        crystalType = "Blue"
+    else
+        local availableTypes: {CrystalType} = {
+            "Blue",
+            "Yellow",
+            "Red",
+        }
 
-    if isNormal then
-        totalYellowCrystals += 1;
-    end;
+        local randomIndex = math.random(1, #availableTypes)
+        crystalType = availableTypes[randomIndex]
+    end
+
+    if crystalType == "Blue" then
+        totalBlueCrystals += 1
+    elseif crystalType == "Yellow" then
+        totalYellowCrystals += 1
+    end
 
     -- =====================================================
     -- ORBE FÍSICO
@@ -397,9 +406,9 @@ createPickup = function(
     orb.Material = Enum.Material.Neon;
 
     orb.Color =
-        if isSpecial then
+        if crystalType == "Blue" then
             Color3.fromRGB(70, 200, 255)
-        elseif isNormal then
+        elseif crystalType == "Yellow" then
             Color3.fromRGB(255, 220, 50)
         else
             Color3.fromRGB(255, 70, 70);
@@ -414,7 +423,7 @@ createPickup = function(
 
     local claimed = false;
 
-    if isSpecial then
+    if crystalType == "Blue" then
         -- =====================================================
         -- SENSOR INVISIBLE
         -- =====================================================
@@ -474,7 +483,7 @@ createPickup = function(
 
                 claimed = true;
                 sensor:Destroy();
-                validRecolet(orb, player, orbType);
+                validRecolet(orb, player, crystalType);
             end;
         end);
     else
@@ -483,7 +492,7 @@ createPickup = function(
 
             if success and player and humanoid and rootPart then
                 claimed = true;
-                validRecolet(orb, player, orbType);
+                validRecolet(orb, player, crystalType);
             end;
         end);
     end;
@@ -492,9 +501,9 @@ end;
 for index, position in pickupPositions do
     -- Si llegamos al último cristal y todavía no existe
     -- ningún azul, forzamos ese último cristal a ser azul.
-    local forcePositive = index == #pickupPositions and totalBlueCrystals == 0;
+    local forceBlue  = index == #pickupPositions and totalBlueCrystals == 0;
 
-    createPickup(position, forcePositive);
+    createPickup(position, forceBlue );
 end;
 
 RoundService.Start(totalBlueCrystals, totalYellowCrystals);

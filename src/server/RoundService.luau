@@ -5,6 +5,7 @@ local Config = require(
     ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 );
 
+type CrystalType = Config.CrystalType;
 local RoundService = {};
 
 -- =========================================================
@@ -166,23 +167,23 @@ end;
 -- REGISTRAR RECOLECCIÓN
 -- =========================================================
 function RoundService.RegisterCrystalCollected(
-    orbType: number
+    crystalType: CrystalType
 )
     if not roundActive then
         return;
     end;
 
     -- Los cristales rojos no forman parte del objetivo.
-    if orbType == 3 then
+    if crystalType == "Red" then
         RoundService.PenalizeTime(Config.RedeemPenalty);
         return;
     end;
 
-    if orbType == 1 then
+    if crystalType == "Blue" then
         blueRemaining.Value -= 1;
     end;
 
-    if orbType == 2 then
+    if crystalType == "Yellow" then
         yellowRemaining.Value -= 1;
     end;
 
