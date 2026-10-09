@@ -72,7 +72,7 @@ end;
 
 local objectiveLabel = makeLabel(
     "ObjectiveLabel",
-    "Cristales azules: ...",
+    "Cristales azules y amarillos: ...",
     UDim2.fromOffset(12, 8),
     UDim2.new(1, -24, 0, 28)
 );
@@ -126,14 +126,19 @@ local blueRemaining = gameState:WaitForChild(
     "BlueRemaining"
 ) :: IntValue;
 
+local yellowRemaining = gameState:WaitForChild(
+    "YellowRemaining"
+) :: IntValue;
+
 local roundStatus = gameState:WaitForChild(
     "Status"
 ) :: StringValue;
 
 local function updateRoundUI()
+    print("Actualizando UI de la ronda..." .. timeRemaining.Value);
     objectiveLabel.Text =
-        "Cristales azules: "
-            .. tostring(blueRemaining.Value);
+        "Cristales azules y amarillos: "
+            .. tostring(blueRemaining.Value + yellowRemaining.Value);
 
     timerLabel.Text =
         "Tiempo: "
@@ -147,12 +152,12 @@ local function updateRoundUI()
     elseif roundStatus.Value == "Playing" then
 
         statusLabel.Text =
-            "¡Recoge todos los cristales azules!";
+            "¡Recoge todos los cristales azules y amarillos!";
 
     elseif roundStatus.Value == "Won" then
 
         statusLabel.Text =
-            "¡GANASTE! Recogiste todos los cristales azules.";
+            "¡GANASTE! Recogiste todos los cristales azules y amarillos.";
 
     elseif roundStatus.Value == "Lost" then
 
@@ -165,6 +170,8 @@ end;
 timeRemaining.Changed:Connect(updateRoundUI);
 
 blueRemaining.Changed:Connect(updateRoundUI);
+
+yellowRemaining.Changed:Connect(updateRoundUI);
 
 roundStatus.Changed:Connect(updateRoundUI);
 

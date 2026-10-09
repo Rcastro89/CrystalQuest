@@ -200,7 +200,7 @@ local function playPickupSound(
     sound:Play();
 end;
 
-local function awardCoins(player: Player, isPositive: boolean)
+local function awardCoins(player: Player, orbType: number)
     local data = DataService.Get(player);
 
     if not data then
@@ -215,11 +215,13 @@ local function awardCoins(player: Player, isPositive: boolean)
 
     local amount = Config.BasePickupReward * multiplier;
 
-    if not isPositive then
+    if orbType == 3 then
         amount = -amount;
+    elseif orbType == 2 then
+        amount = amount / 2;
     end;
 
-    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " isPositive: " .. tostring(isPositive));
+    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " orbType: " .. tostring(orbType));
 
     if DataService.AddCoins(player, amount) then
         updateLeaderstats(player);
@@ -242,10 +244,11 @@ end;
 
 local pickupPositions: { Vector3 } = {};
 
-local TOTAL_ITEMS: number = 10;
+local TOTAL_ITEMS: number = Config.TotalPickups; -- Número total de cristales a generar
 local MIN_DISTANCE: number = 7; -- Distancia mínima entre monedas/objetos en studs
 local MAX_ATTEMPTS: number = 100; -- Límite para evitar bucles infinitos si el área se llena
 local totalBlueCrystals: number = 0;
+local totalYellowCrystals: number = 0;
 
 for i = 1, TOTAL_ITEMS do
     local newPos: Vector3;
@@ -277,16 +280,102 @@ for i = 1, TOTAL_ITEMS do
     end;
 end;
 
+local function validRecolet(orb: Part, player: Player, orbType: number)
+    -- =================================================
+    -- RECOLECCIÓN VÁLIDA
+    -- =================================================
+    RoundService.RegisterCrystalCollected(orbType);
+    -- Sonido y recompensa.
+    playPickupSound(orb.Position, orbType ~= 3);
+    awardCoins(player, orbType);
+
+    -- =================================================
+    -- REBOTE DEL ORBE
+    -- =================================================
+
+    -- A partir de aquí el orbe deja de ser estático
+    -- y pasa a formar parte de la simulación física.
+    orb.Anchored = false;
+
+    -- El servidor mantiene la autoridad física.
+    orb:SetNetworkOwner(nil);
+
+    -- Evitamos que el jugador pueda empujarlo lateralmente
+    -- mientras dura la pequeña animación de rebote.
+    orb.CanCollide = false;
+
+    local desiredVelocity = Vector3.new(
+        0,
+        Config.CrystalBounceVelocity,
+        0
+    );
+
+    local impulse = desiredVelocity * orb.AssemblyMass;
+
+    orb:ApplyImpulse(impulse);
+
+    -- =================================================
+    -- ELIMINACIÓN Y RESPAWN
+    -- =================================================
+    task.delay(Config.CrystalDestroyDelay, function()
+        if orb.Parent then
+            orb:Destroy();
+        end;
+    end);
+end;
+
+local function canContinue(claimed: boolean, hit: BasePart): (boolean, Player?, Humanoid?, BasePart?)
+    if claimed then
+        return false;
+    end;
+
+    if not RoundService.IsActive() then
+        return false;
+    end;
+
+    local character = hit:FindFirstAncestorOfClass("Model");
+
+    if not character then
+        return false;
+    end;
+
+    local player = Players:GetPlayerFromCharacter(character);
+
+    if not player or not DataService.Get(player) then
+        return false;
+    end;
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid");
+    local rootPart = character:FindFirstChild("HumanoidRootPart");
+
+    if not humanoid or humanoid.Health <= 0 then
+        return false;
+    end;
+
+    if not rootPart or not rootPart:IsA("BasePart") then
+        return false;
+    end;
+
+    return true, player, humanoid, rootPart;
+end;
+
 local createPickup: (Vector3, boolean?) -> ();
 
 createPickup = function(
     position: Vector3,
     forcePositive: boolean?
 )
-    local isPositive = forcePositive and true or math.random(1, 2) == 1;
+    local orbType = math.random(1, 3);
+    local isSpecial = forcePositive and true or orbType == 1;
+    local isNormal = orbType == 2;
+    local isNegative = orbType == 3;
 
-    if isPositive then
+    if isSpecial then
         totalBlueCrystals += 1;
+    end;
+
+    if isNormal then
+        totalYellowCrystals += 1;
     end;
 
     -- =====================================================
@@ -307,9 +396,13 @@ createPickup = function(
 
     orb.Material = Enum.Material.Neon;
 
-    orb.Color = isPositive
-        and Color3.fromRGB(70, 200, 255)
-        or Color3.fromRGB(255, 70, 70);
+    orb.Color =
+        if isSpecial then
+            Color3.fromRGB(70, 200, 255)
+        elseif isNormal then
+            Color3.fromRGB(255, 220, 50)
+        else
+            Color3.fromRGB(255, 70, 70);
 
     orb.CustomPhysicalProperties = PhysicalProperties.new(
         Config.CrystalDensity,
@@ -319,140 +412,81 @@ createPickup = function(
 
     orb.Parent = Workspace;
 
-    -- =====================================================
-    -- SENSOR INVISIBLE
-    -- =====================================================
-    local sensor = Instance.new("Part");
-    sensor.Name = "CrystalLandingSensor";
-
-    -- Un poco más pequeño que el cristal para exigir
-    -- que el jugador caiga aproximadamente sobre su centro.
-    sensor.Size = Vector3.new(1.6, 0.25, 1.6);
-
-    -- El sensor queda justo encima del cristal.
-    sensor.Position = position + Vector3.new(0, 2, 0);
-
-    sensor.Anchored = true;
-    sensor.CanCollide = false;
-    sensor.CanTouch = true;
-    sensor.CanQuery = false;
-
-    -- El jugador no debe poder ver este objeto.
-    --sensor.Transparency = 1;
-    sensor.Parent = Workspace;
-
     local claimed = false;
 
-    -- =====================================================
-    -- DETECCIÓN DEL ATERRIZAJE
-    -- =====================================================
-    sensor.Touched:Connect(function(hit: BasePart)
-        if claimed then
-            return;
-        end;
+    if isSpecial then
+        -- =====================================================
+        -- SENSOR INVISIBLE
+        -- =====================================================
+        local sensor = Instance.new("Part");
+        sensor.Name = "CrystalLandingSensor";
 
-        if not RoundService.IsActive() then
-            return;
-        end;
+        -- Un poco más pequeño que el cristal para exigir
+        -- que el jugador caiga aproximadamente sobre su centro.
+        sensor.Size = Vector3.new(1.6, 0.25, 1.6);
 
-        local character = hit:FindFirstAncestorOfClass("Model");
+        -- El sensor queda justo encima del cristal.
+        sensor.Position = position + Vector3.new(0, 2, 0);
 
-        if not character then
-            return;
-        end;
+        sensor.Anchored = true;
+        sensor.CanCollide = false;
+        sensor.CanTouch = true;
+        sensor.CanQuery = false;
 
-        local player = Players:GetPlayerFromCharacter(character);
+        -- El jugador no debe poder ver este objeto.
+        --sensor.Transparency = 1;
+        sensor.Parent = Workspace;
 
-        if not player or not DataService.Get(player) then
-            return;
-        end;
+        -- =====================================================
+        -- DETECCIÓN DEL ATERRIZAJE
+        -- =====================================================
+        sensor.Touched:Connect(function(hit: BasePart)
+            local success, player, humanoid, rootPart = canContinue(claimed, hit);
 
-        local humanoid = character:FindFirstChildOfClass("Humanoid");
-        local rootPart = character:FindFirstChild("HumanoidRootPart");
+            if success and player and humanoid and rootPart then
 
-        if not humanoid or humanoid.Health <= 0 then
-            return;
-        end;
+                local foot = isFootPart(hit);
+                print(foot and "Tocó un pie" or "Tocó otra parte del cuerpo");
+                if not foot then
+                    return;
+                end;
 
-        if not rootPart or not rootPart:IsA("BasePart") then
-            return;
-        end;
+                -- El sensor no tiene colisión física, así que aquí
+                -- podemos comprobar la velocidad sin que el contacto
+                -- con el sensor haya alterado la física del jugador.
+                local verticalVelocity = rootPart.AssemblyLinearVelocity.Y;
 
-        local foot = isFootPart(hit);
-        print(foot and "Tocó un pie" or "Tocó otra parte del cuerpo");
-        if not foot then
-            return;
-        end;
+                if verticalVelocity > 0 then
+                    return;
+                end;
 
-        -- El sensor no tiene colisión física, así que aquí
-        -- podemos comprobar la velocidad sin que el contacto
-        -- con el sensor haya alterado la física del jugador.
-        local verticalVelocity = rootPart.AssemblyLinearVelocity.Y;
+                -- Comprobamos que el jugador esté horizontalmente
+                -- encima del cristal.
+                local horizontalOffset = Vector3.new(
+                    rootPart.Position.X - orb.Position.X,
+                    0,
+                    rootPart.Position.Z - orb.Position.Z
+                );
 
-        if verticalVelocity > 0 then
-            return;
-        end;
+                if horizontalOffset.Magnitude > 2 then
+                    return;
+                end;
 
-        -- Comprobamos que el jugador esté horizontalmente
-        -- encima del cristal.
-        local horizontalOffset = Vector3.new(
-            rootPart.Position.X - orb.Position.X,
-            0,
-            rootPart.Position.Z - orb.Position.Z
-        );
-
-        if horizontalOffset.Magnitude > 2 then
-            return;
-        end;
-
-        -- =================================================
-        -- RECOLECCIÓN VÁLIDA
-        -- =================================================
-        claimed = true;
-
-        -- Ya no necesitamos el sensor.
-        sensor:Destroy();
-
-        RoundService.RegisterCrystalCollected(isPositive);
-        -- Sonido y recompensa.
-        playPickupSound(orb.Position, isPositive);
-        awardCoins(player, isPositive);
-
-        -- =================================================
-        -- REBOTE DEL ORBE
-        -- =================================================
-
-        -- A partir de aquí el orbe deja de ser estático
-        -- y pasa a formar parte de la simulación física.
-        orb.Anchored = false;
-
-        -- El servidor mantiene la autoridad física.
-        orb:SetNetworkOwner(nil);
-
-        -- Evitamos que el jugador pueda empujarlo lateralmente
-        -- mientras dura la pequeña animación de rebote.
-        orb.CanCollide = false;
-
-        local desiredVelocity = Vector3.new(
-            0,
-            Config.CrystalBounceVelocity,
-            0
-        );
-
-        local impulse = desiredVelocity * orb.AssemblyMass;
-
-        orb:ApplyImpulse(impulse);
-
-        -- =================================================
-        -- ELIMINACIÓN Y RESPAWN
-        -- =================================================
-        task.delay(Config.CrystalDestroyDelay, function()
-            if orb.Parent then
-                orb:Destroy();
+                claimed = true;
+                sensor:Destroy();
+                validRecolet(orb, player, orbType);
             end;
         end);
+    else
+        orb.Touched:Connect(function(hit: BasePart)
+            local success, player, humanoid, rootPart = canContinue(claimed, hit);
 
-    end);
+            if success and player and humanoid and rootPart then
+                claimed = true;
+                validRecolet(orb, player, orbType);
+            end;
+        end);
+    end;
 end;
 
 for index, position in pickupPositions do
@@ -463,7 +497,7 @@ for index, position in pickupPositions do
     createPickup(position, forcePositive);
 end;
 
-RoundService.Start(totalBlueCrystals);
+RoundService.Start(totalBlueCrystals, totalYellowCrystals);
 
 -- =========================================================
 -- 7. COMPRA DE MEJORA CON MONEDAS
