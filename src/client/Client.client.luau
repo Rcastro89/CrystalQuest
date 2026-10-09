@@ -115,24 +115,15 @@ local statusLabel = makeLabel(
     UDim2.new(1, -24, 0, 60)
 );
 
-
 local gameState = ReplicatedStorage:WaitForChild("GameState");
 
-local timeRemaining = gameState:WaitForChild(
-    "TimeRemaining"
-) :: IntValue;
+local timeRemaining = gameState:WaitForChild("TimeRemaining") :: IntValue;
 
-local blueRemaining = gameState:WaitForChild(
-    "BlueRemaining"
-) :: IntValue;
+local blueRemaining = gameState:WaitForChild("BlueRemaining") :: IntValue;
 
-local yellowRemaining = gameState:WaitForChild(
-    "YellowRemaining"
-) :: IntValue;
+local yellowRemaining = gameState:WaitForChild("YellowRemaining") :: IntValue;
 
-local roundStatus = gameState:WaitForChild(
-    "Status"
-) :: StringValue;
+local roundStatus = gameState:WaitForChild("Status") :: StringValue;
 
 local function updateRoundUI()
     print("Actualizando UI de la ronda..." .. timeRemaining.Value);
@@ -140,29 +131,23 @@ local function updateRoundUI()
         "Cristales azules y amarillos: "
             .. tostring(blueRemaining.Value + yellowRemaining.Value);
 
-    timerLabel.Text =
-        "Tiempo: "
-            .. tostring(timeRemaining.Value);
+    timerLabel.Text = "Tiempo: " .. tostring(timeRemaining.Value);
 
     if roundStatus.Value == "Waiting" then
 
-        statusLabel.Text =
-            "Preparando la ronda...";
+        statusLabel.Text = "Cruza la línea de salida para comenzar.";
 
     elseif roundStatus.Value == "Playing" then
 
-        statusLabel.Text =
-            "¡Recoge todos los cristales azules y amarillos!";
+        statusLabel.Text = "¡Recoge todos los cristales azules y amarillos!";
 
     elseif roundStatus.Value == "Won" then
 
-        statusLabel.Text =
-            "¡GANASTE! Recogiste todos los cristales azules y amarillos.";
+        statusLabel.Text = "¡GANASTE! Recogiste todos los cristales azules y amarillos.";
 
     elseif roundStatus.Value == "Lost" then
 
-        statusLabel.Text =
-            "¡PERDISTE! Se acabó el tiempo.";
+        statusLabel.Text = "¡PERDISTE! Se acabó el tiempo.";
 
     end;
 end;

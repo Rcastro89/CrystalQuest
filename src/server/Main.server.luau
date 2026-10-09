@@ -2,15 +2,14 @@
 local Players = game:GetService("Players");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local MarketplaceService = game:GetService("MarketplaceService");
-local Workspace = game:GetService("Workspace");
-
-local Config = require(
-    ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
-);
-
-type CrystalType = Config.CrystalType;
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"));
 local DataService = require(script.Parent.DataService);
 local RoundService = require(script.Parent.RoundService);
+local services = script.Parent:WaitForChild("services");
+local CrystalService = require(services:WaitForChild("CrystalService"));
+local StartLineService = require(services:WaitForChild("StartLineService"));
+
+type CrystalType = Config.CrystalType;
 
 type PurchaseResult = {
     ok: boolean,
@@ -168,39 +167,6 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(
 -- =========================================================
 -- 5. RECOMPENSAS
 -- =========================================================
-
--- =========================================================
--- SONIDO DE RECOLECCIÓN
--- =========================================================
-local function playPickupSound(
-    position: Vector3,
-    isPositive: boolean
-)
-    local attachment = Instance.new("Attachment");
-    attachment.Name = "PickupSoundAttachment";
-    attachment.Position = position;
-    attachment.Parent = Workspace.Terrain;
-
-    local sound = Instance.new("Sound");
-    sound.Name = "PickupSound";
-
-    if isPositive then
-        sound.SoundId = Config.PositivePickupSoundId;
-    else
-        sound.SoundId = Config.NegativePickupSoundId;
-    end;
-
-    sound.Volume = Config.PickupSoundVolume;
-    sound.RollOffMaxDistance = Config.PickupSoundMaxDistance;
-    sound.Parent = attachment;
-
-    sound.Ended:Connect(function()
-        attachment:Destroy();
-    end);
-
-    sound:Play();
-end;
-
 local function awardCoins(player: Player, crystalType: CrystalType)
     local data = DataService.Get(player);
 
@@ -230,283 +196,50 @@ local function awardCoins(player: Player, crystalType: CrystalType)
 end;
 
 -- =========================================================
--- 6. GENERACIÓN Y RECOLECCIÓN DE CRISTALES
+-- INICIO DE LA RONDA AL CRUZAR LA LÍNEA
 -- =========================================================
-local function isFootPart(part: BasePart): boolean
-    local name = part.Name;
-
-    return name == "LeftFoot"
-        or name == "RightFoot"
-        or name == "LeftLowerLeg"
-        or name == "RightLowerLeg"
-        or name == "Left Leg"
-        or name == "Right Leg";
+local function isPlayerReady(player: Player): boolean
+    return DataService.Get(player) ~= nil;
 end;
 
-local pickupPositions: { Vector3 } = {};
-
-local TOTAL_ITEMS: number = Config.TotalPickups; -- Número total de cristales a generar
-local MIN_DISTANCE: number = 7; -- Distancia mínima entre monedas/objetos en studs
-local MAX_ATTEMPTS: number = 100; -- Límite para evitar bucles infinitos si el área se llena
-local totalBlueCrystals: number = 0;
-local totalYellowCrystals: number = 0;
-
-for i = 1, TOTAL_ITEMS do
-    local newPos: Vector3;
-    local isValid: boolean = false;
-    local attempts: number = 0;
-
-    repeat
-        attempts += 1;
-        local x = math.random(-30, 30);
-        local z = math.random(-30, 30);
-        newPos = Vector3.new(x, 2, z);
-
-        -- Asumimos que es válida hasta que se demuestre lo contrario
-        isValid = true;
-
-        for _, existingPos in ipairs(pickupPositions) do
-            -- (v1 - v2).Magnitude calcula la distancia en studs entre dos vectores
-            if (newPos - existingPos).Magnitude < MIN_DISTANCE then
-                isValid = false;
-                break; -- Está muy cerca de una existente, descartar y reintentar
-            end;
-        end;
-    until isValid or attempts >= MAX_ATTEMPTS;
-
-    if isValid then
-        table.insert(pickupPositions, newPos);
-    else
-        warn("No se encontró una posición libre tras " .. MAX_ATTEMPTS .. " intentos.");
-    end;
-end;
-
-local function validRecolet(orb: Part, player: Player, crystalType: CrystalType)
-    -- =================================================
-    -- RECOLECCIÓN VÁLIDA
-    -- =================================================
-    RoundService.RegisterCrystalCollected(crystalType);
-    -- Sonido y recompensa.
-    playPickupSound(orb.Position, crystalType ~= "Red");
-    awardCoins(player, crystalType);
-
-    -- =================================================
-    -- REBOTE DEL ORBE
-    -- =================================================
-
-    -- A partir de aquí el orbe deja de ser estático
-    -- y pasa a formar parte de la simulación física.
-    orb.Anchored = false;
-
-    -- El servidor mantiene la autoridad física.
-    orb:SetNetworkOwner(nil);
-
-    -- Evitamos que el jugador pueda empujarlo lateralmente
-    -- mientras dura la pequeña animación de rebote.
-    orb.CanCollide = false;
-
-    local desiredVelocity = Vector3.new(
-        0,
-        Config.CrystalBounceVelocity,
-        0
-    );
-
-    local impulse = desiredVelocity * orb.AssemblyMass;
-
-    orb:ApplyImpulse(impulse);
-
-    -- =================================================
-    -- ELIMINACIÓN Y RESPAWN
-    -- =================================================
-    task.delay(Config.CrystalDestroyDelay, function()
-        if orb.Parent then
-            orb:Destroy();
-        end;
-    end);
-end;
-
-local function canContinue(claimed: boolean, hit: BasePart): (boolean, Player?, Humanoid?, BasePart?)
-    if claimed then
-        return false;
-    end;
-
-    if not RoundService.IsActive() then
-        return false;
-    end;
-
-    local character = hit:FindFirstAncestorOfClass("Model");
-
-    if not character then
-        return false;
-    end;
-
-    local player = Players:GetPlayerFromCharacter(character);
-
-    if not player or not DataService.Get(player) then
-        return false;
-    end;
-
-    local humanoid = character:FindFirstChildOfClass("Humanoid");
-    local rootPart = character:FindFirstChild("HumanoidRootPart");
-
-    if not humanoid or humanoid.Health <= 0 then
-        return false;
-    end;
-
-    if not rootPart or not rootPart:IsA("BasePart") then
-        return false;
-    end;
-
-    return true, player, humanoid, rootPart;
-end;
-
-local createPickup: (Vector3, boolean?) -> ();
-
-createPickup = function(
-    position: Vector3,
-    forceBlue: boolean?
+local function onCrystalCollected(
+    player: Player,
+    crystalType: CrystalType
 )
-    local crystalType: CrystalType
+    if not isPlayerReady(player) then
+        return;
+    end;
 
-    if forceBlue == true then
-        crystalType = "Blue"
-    else
-        local availableTypes: {CrystalType} = {
-            "Blue",
-            "Yellow",
-            "Red",
-        }
+    -- Cada servicio se encarga de su propia responsabilidad.
+    RoundService.RegisterCrystalCollected(crystalType);
 
-        local randomIndex = math.random(1, #availableTypes)
-        crystalType = availableTypes[randomIndex]
-    end
+    awardCoins(player, crystalType);
+end;
 
-    if crystalType == "Blue" then
-        totalBlueCrystals += 1
-    elseif crystalType == "Yellow" then
-        totalYellowCrystals += 1
-    end
+local function onStartLineCrossed(player: Player): boolean
+    if not isPlayerReady(player) then
+        warn(
+            "[Main] El jugador todavía no está preparado: "
+                .. player.Name
+        );
 
-    -- =====================================================
-    -- ORBE FÍSICO
-    -- =====================================================
-    local orb = Instance.new("Part");
-    orb.Name = "Crystal";
-    orb.Shape = Enum.PartType.Block;
-    orb.Size = Vector3.new(4, 4, 4);
-    orb.Position = position;
+        return false;
+    end;
 
-    -- El orbe es sólido, pero permanece fijo hasta que
-    -- un jugador lo recoge correctamente.
-    orb.Anchored = true;
-    orb.CanCollide = true;
-    orb.CanTouch = true;
-    orb.CanQuery = true;
-
-    orb.Material = Enum.Material.Neon;
-
-    orb.Color =
-        if crystalType == "Blue" then
-            Color3.fromRGB(70, 200, 255)
-        elseif crystalType == "Yellow" then
-            Color3.fromRGB(255, 220, 50)
-        else
-            Color3.fromRGB(255, 70, 70);
-
-    orb.CustomPhysicalProperties = PhysicalProperties.new(
-        Config.CrystalDensity,
-        Config.CrystalFriction,
-        Config.CrystalElasticity
+    -- Primero generamos los objetivos del recorrido.
+    local totalBlue, totalYellow = CrystalService.SpawnRound(
+        isPlayerReady,
+        onCrystalCollected
     );
 
-    orb.Parent = Workspace;
+    -- Después iniciamos el temporizador con las cantidades reales.
+    RoundService.Start(totalBlue, totalYellow);
 
-    local claimed = false;
-
-    if crystalType == "Blue" then
-        -- =====================================================
-        -- SENSOR INVISIBLE
-        -- =====================================================
-        local sensor = Instance.new("Part");
-        sensor.Name = "CrystalLandingSensor";
-
-        -- Un poco más pequeño que el cristal para exigir
-        -- que el jugador caiga aproximadamente sobre su centro.
-        sensor.Size = Vector3.new(1.6, 0.25, 1.6);
-
-        -- El sensor queda justo encima del cristal.
-        sensor.Position = position + Vector3.new(0, 2, 0);
-
-        sensor.Anchored = true;
-        sensor.CanCollide = false;
-        sensor.CanTouch = true;
-        sensor.CanQuery = false;
-
-        -- El jugador no debe poder ver este objeto.
-        --sensor.Transparency = 1;
-        sensor.Parent = Workspace;
-
-        -- =====================================================
-        -- DETECCIÓN DEL ATERRIZAJE
-        -- =====================================================
-        sensor.Touched:Connect(function(hit: BasePart)
-            local success, player, humanoid, rootPart = canContinue(claimed, hit);
-
-            if success and player and humanoid and rootPart then
-
-                local foot = isFootPart(hit);
-                print(foot and "Tocó un pie" or "Tocó otra parte del cuerpo");
-                if not foot then
-                    return;
-                end;
-
-                -- El sensor no tiene colisión física, así que aquí
-                -- podemos comprobar la velocidad sin que el contacto
-                -- con el sensor haya alterado la física del jugador.
-                local verticalVelocity = rootPart.AssemblyLinearVelocity.Y;
-
-                if verticalVelocity > 0 then
-                    return;
-                end;
-
-                -- Comprobamos que el jugador esté horizontalmente
-                -- encima del cristal.
-                local horizontalOffset = Vector3.new(
-                    rootPart.Position.X - orb.Position.X,
-                    0,
-                    rootPart.Position.Z - orb.Position.Z
-                );
-
-                if horizontalOffset.Magnitude > 2 then
-                    return;
-                end;
-
-                claimed = true;
-                sensor:Destroy();
-                validRecolet(orb, player, crystalType);
-            end;
-        end);
-    else
-        orb.Touched:Connect(function(hit: BasePart)
-            local success, player, humanoid, rootPart = canContinue(claimed, hit);
-
-            if success and player and humanoid and rootPart then
-                claimed = true;
-                validRecolet(orb, player, crystalType);
-            end;
-        end);
-    end;
+    return true;
 end;
 
-for index, position in pickupPositions do
-    -- Si llegamos al último cristal y todavía no existe
-    -- ningún azul, forzamos ese último cristal a ser azul.
-    local forceBlue  = index == #pickupPositions and totalBlueCrystals == 0;
-
-    createPickup(position, forceBlue );
-end;
-
-RoundService.Start(totalBlueCrystals, totalYellowCrystals);
+-- La línea queda preparada, pero la ronda continúa esperando.
+StartLineService.Initialize(onStartLineCrossed);
 
 -- =========================================================
 -- 7. COMPRA DE MEJORA CON MONEDAS

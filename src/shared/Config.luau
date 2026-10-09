@@ -1,5 +1,5 @@
 --!strict
-export type CrystalType = "Blue" | "Yellow" | "Red"
+export type CrystalType = "Blue" | "Yellow" | "Red";
 
 local Config = {
     -- Sistema de recolección
@@ -8,7 +8,7 @@ local Config = {
     SecondsPerBlueCrystal = 5,
     SecondsPerYellowCrystal = 2,
     TotalPickups = 10,
-    RedeemPenalty = 10,
+    RedeemPenalty = 2,
     -- Mejora comprada con monedas
     UpgradeCost = 25,
     DoublePickupMultiplier = 2,
@@ -30,6 +30,23 @@ local Config = {
     -- Persistencia de datos
     DataStoreName = "CrystalQuest_PlayerData_v1",
     AutosaveSeconds = 60,
+    -- Línea de salida
+    StartLineZ = -35,
+    StartLineWidth = 70,
+    StartLineTriggerHeight = 10,
+    StartLineTriggerDepth = 2,
+    -- Área donde se generan los cristales
+    CrystalMinX = -30,
+    CrystalMaxX = 30,
+    CrystalMinZ = -28,
+    CrystalMaxZ = 30,
+    CrystalGroundY = 2,
+    -- Separación entre cristales
+    CrystalMinDistance = 7,
+    CrystalMaxPositionAttempts = 100,
+    -- Sensor visible durante las pruebas.
+    -- En la versión final podemos establecerlo en 1.
+    CrystalSensorTransparency = 0.5,
 };
 
 return Config;
