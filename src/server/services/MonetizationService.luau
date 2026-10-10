@@ -4,7 +4,7 @@ local MarketplaceService = game:GetService("MarketplaceService");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"));
-local DataService = require(script.Parent.Parent:WaitForChild("DataService"));
+local DataService = require(script.Parent:WaitForChild("DataService"));
 
 local MonetizationService = {};
 

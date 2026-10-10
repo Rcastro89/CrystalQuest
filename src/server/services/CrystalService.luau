@@ -4,13 +4,9 @@ local Workspace = game:GetService("Workspace");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Debris = game:GetService("Debris");
 
-local Config = require(
-    ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
-);
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"));
 
-local RoundService = require(
-    script.Parent.Parent:WaitForChild("RoundService")
-);
+local RoundService = require(script.Parent:WaitForChild("RoundService"));
 
 type CrystalType = Config.CrystalType;
 

@@ -1,9 +1,10 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"));
-local DataService = require(script.Parent.DataService);
-local RoundService = require(script.Parent.RoundService);
+
 local services = script.Parent:WaitForChild("services");
+local DataService = require(services:WaitForChild("DataService"));
+local RoundService = require(services:WaitForChild("RoundService"));
 local CrystalService = require(services:WaitForChild("CrystalService"));
 local StartLineService = require(services:WaitForChild("StartLineService"));
 local MonetizationService = require(services:WaitForChild("MonetizationService"));
