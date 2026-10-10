@@ -143,6 +143,7 @@ local function updateRoundUI()
     elseif roundStatus.Value == "Playing" then
 
         statusLabel.Text = "¡Recoge todos los cristales azules y amarillos!";
+        MapBoundsService.CloseSouthWall();
 
     elseif roundStatus.Value == "Won" then
 

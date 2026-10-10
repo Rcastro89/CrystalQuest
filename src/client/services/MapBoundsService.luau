@@ -7,6 +7,9 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local MapBoundsService = {};
 
 local initialized = false;
+local southWallClosed = false;
+local cachedBounds: ComputedBounds? = nil;
+local cachedFolder: Folder? = nil;
 
 type WallOrientation = "North" | "South" | "East" | "West";
 
@@ -185,9 +188,13 @@ function MapBoundsService.Initialize(): boolean
     folder.Name = "CrystalQuestBounds";
     folder.Parent = Workspace;
 
+    cachedBounds = bounds;
+    cachedFolder = folder;
+    southWallClosed = false;
+
     local orientations = {
         "North" :: WallOrientation,
-        --"South" :: WallOrientation,
+        -- "South" :: WallOrientation,  -- Se cierra al iniciar la ronda
         "East" :: WallOrientation,
         "West" :: WallOrientation,
     };
@@ -198,7 +205,7 @@ function MapBoundsService.Initialize(): boolean
     end;
 
     print(
-        "[MapBounds] Paredes creadas. Área: "
+        "[MapBounds] Paredes creadas (sur abierta). Área: "
         .. tostring(math.floor(bounds.width))
         .. " x "
         .. tostring(math.floor(bounds.depth))
@@ -208,6 +215,34 @@ function MapBoundsService.Initialize(): boolean
         .. tostring(math.floor(bounds.centerZ))
         .. ")"
     );
+
+    return true;
+end;
+
+function MapBoundsService.CloseSouthWall(): boolean
+    if not initialized then
+        warn("[MapBounds] CloseSouthWall requiere Initialize() primero.");
+        return false;
+    end;
+
+    if southWallClosed then
+        return false;
+    end;
+
+    local bounds = cachedBounds;
+    local folder = cachedFolder;
+
+    if not bounds or not folder or not folder.Parent then
+        warn("[MapBounds] No se puede cerrar pared sur: bounds/carpeta no disponibles.");
+        return false;
+    end;
+
+    southWallClosed = true;
+
+    local wall = makeWall(bounds, "South");
+    wall.Parent = folder;
+
+    print("[MapBounds] Pared sur cerrada. Jugador encerrado en el mapa.");
 
     return true;
 end;
