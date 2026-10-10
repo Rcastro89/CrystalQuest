@@ -47,6 +47,12 @@ local Config = {
     -- Sensor visible durante las pruebas.
     -- En la versión final podemos establecerlo en 1.
     CrystalSensorTransparency = 0.5,
+    -- Límites del mapa (paredes cerradas del corral)
+    MapBoundsMargin = 2,
+    MapBoundsWallThickness = 1,
+    MapBoundsWallHeight = 15,
+    MapBoundsWallColor = Color3.fromRGB(80, 90, 120),
+    MapBoundsWallMaterial = Enum.Material.Concrete,
 };
 
 return Config;

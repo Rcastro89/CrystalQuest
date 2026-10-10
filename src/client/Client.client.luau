@@ -7,6 +7,9 @@ local Config = require(
     ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 );
 
+local services = script.Parent:WaitForChild("services");
+local MapBoundsService = require(services:WaitForChild("MapBoundsService"));
+
 local player = Players.LocalPlayer;
 local playerGui = player:WaitForChild("PlayerGui");
 
@@ -237,3 +240,8 @@ passButton.Activated:Connect(function()
         statusLabel.Text = "No se pudo abrir la compra.";
     end;
 end);
+
+-- =========================================================
+-- 6. INICIALIZACIÓN DE LÍMITES DEL MAPA (PAREDES)
+-- =========================================================
+MapBoundsService.Initialize();
