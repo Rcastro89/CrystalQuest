@@ -6,6 +6,7 @@ local services = script.Parent:WaitForChild("services");
 local DataService = require(services:WaitForChild("DataService"));
 local RoundService = require(services:WaitForChild("RoundService"));
 local CrystalService = require(services:WaitForChild("CrystalService"));
+local EnemyService = require(services:WaitForChild("EnemyService"));
 local StartLineService = require(services:WaitForChild("StartLineService"));
 local MonetizationService = require(services:WaitForChild("MonetizationService"));
 local PlayerLifecycleService = require(services:WaitForChild("PlayerLifecycleService"));
@@ -57,6 +58,9 @@ local function onStartLineCrossed(player: Player): boolean
         onCrystalCollected
     );
 
+    -- Después, los enemigos de la ronda (independiente).
+    EnemyService.SpawnRound();
+
     -- Después iniciamos el temporizador con las cantidades reales.
     RoundService.Start(totalBlue, totalYellow);
 
@@ -66,5 +70,6 @@ end;
 -- =========================================================
 -- INICIALIZACIÓN DEL JUEGO
 -- =========================================================
+EnemyService.Initialize();
 StartLineService.Initialize(onStartLineCrossed);
 PlayerLifecycleService.Initialize();

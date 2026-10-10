@@ -166,16 +166,26 @@ function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
             return;
         end;
 
+        -- IMPORTANTE: Desactivamos el trigger y marcamos el
+        -- estado ANTES de invocar el callback. Durante la
+        -- carga de assets (modelo 3D, enemigos, etc.) pueden
+        -- pasar ~300ms y Touched suele dispararse varias
+        -- veces (varias partes del jugador o incluso nuevos
+        -- Models entrando en Workspace). Cerrar la compuerta
+        -- primero evita doble ejecución del onPlayerCrossed.
+        startTriggered = true;
+        trigger.CanTouch = false;
+
         -- El callback devuelve true solo si pudo iniciar la ronda.
         local accepted = onPlayerCrossed(player);
 
         if not accepted then
+            -- Rollback: si el servidor rechazó el inicio,
+            -- volvemos a habilitar la línea para otro intento.
+            startTriggered = false;
+            trigger.CanTouch = true;
             return;
         end;
-
-        -- Un solo cruce válido inicia la ronda compartida.
-        startTriggered = true;
-        trigger.CanTouch = false;
 
         setStartLineColor(startLineParts, Color3.fromRGB(70, 255, 100));
 

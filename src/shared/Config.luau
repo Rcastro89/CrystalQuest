@@ -47,6 +47,10 @@ local Config = {
     -- Sensor visible durante las pruebas.
     -- En la versión final podemos establecerlo en 1.
     CrystalSensorTransparency = 0.5,
+    -- Monstruo decorativo junto a los cristales
+    MonsterAssetId = 11545181738,
+    MonsterSizeScale = 1.0,
+    MonsterMinDistanceFromOthers = 7,
     -- Límites del mapa (paredes cerradas del corral)
     MapBoundsMargin = 2,
     MapBoundsWallThickness = 1,
