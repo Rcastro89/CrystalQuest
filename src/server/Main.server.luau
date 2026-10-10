@@ -8,45 +8,15 @@ local CrystalService = require(services:WaitForChild("CrystalService"));
 local StartLineService = require(services:WaitForChild("StartLineService"));
 local MonetizationService = require(services:WaitForChild("MonetizationService"));
 local PlayerLifecycleService = require(services:WaitForChild("PlayerLifecycleService"));
+local EconomyService = require(services:WaitForChild("EconomyService"));
 
 type CrystalType = Config.CrystalType;
 
 -- =========================================================
 -- INICIALIZACIÓN DE MONETIZACIÓN
 -- =========================================================
-MonetizationService.Initialize(PlayerLifecycleService.UpdateLeaderstats)
-
-
--- =========================================================
--- ECONOMÍA
--- =========================================================
-local function awardCoins(player: Player, crystalType: CrystalType)
-    local data = DataService.Get(player);
-
-    if not data then
-        return;
-    end;
-
-    local multiplier = data.PickupMultiplier;
-
-    if MonetizationService.HasDoubleCoins(player) then
-        multiplier *= 2;
-    end;
-
-    local amount = Config.BluePickupReward * multiplier;
-
-    if crystalType == "Red" then
-        amount = -amount;
-    elseif crystalType == "Yellow" then
-        amount = Config.YellowPickupReward * multiplier;
-    end;
-
-    print(player.Name .. " recolectó un cristal: " .. amount .. " monedas." .. " Multiplicador: " .. multiplier .. " crystalType: " .. tostring(crystalType));
-
-    if DataService.AddCoins(player, amount) then
-        PlayerLifecycleService.UpdateLeaderstats(player)
-    end;
-end;
+MonetizationService.Initialize(PlayerLifecycleService.UpdateLeaderstats);
+EconomyService.Initialize(PlayerLifecycleService.UpdateLeaderstats);
 
 -- =========================================================
 -- COORDINACIÓN DE LA RONDA
@@ -66,7 +36,8 @@ local function onCrystalCollected(
     -- Cada servicio se encarga de su propia responsabilidad.
     RoundService.RegisterCrystalCollected(crystalType);
 
-    awardCoins(player, crystalType);
+    -- La economía gestiona el saldo y los multiplicadores.
+    EconomyService.AwardCrystalReward(player, crystalType)
 end;
 
 local function onStartLineCrossed(player: Player): boolean
@@ -94,7 +65,5 @@ end;
 -- =========================================================
 -- INICIALIZACIÓN DEL JUEGO
 -- =========================================================
-
 StartLineService.Initialize(onStartLineCrossed);
-PlayerLifecycleService.Initialize()
-
+PlayerLifecycleService.Initialize();
