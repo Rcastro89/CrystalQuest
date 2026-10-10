@@ -2,6 +2,7 @@
 local Players = game:GetService("Players");
 local Workspace = game:GetService("Workspace");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
+local InsertService = game:GetService("InsertService");
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"));
 
@@ -10,7 +11,42 @@ local StartLineService = {};
 local initialized = false;
 local startTriggered = false;
 
+local START_LINE_ASSET_ID = 2037650641;
+
 type OnPlayerCrossed = (Player) -> boolean;
+
+local function configureStartLineModel(model: Model)
+    model.Name = "StartLine";
+
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Anchored = true;
+            descendant.CanCollide = false;
+            descendant.CanTouch = false;
+            descendant.CanQuery = false;
+        end;
+    end;
+
+    local modelSize = model:GetExtentsSize();
+    local targetY = 0.1 + (modelSize.Y / 2);
+    model:PivotTo(CFrame.new(0, targetY, Config.StartLineZ) * CFrame.Angles(0, math.rad(90), 0));
+end;
+
+local function getStartLineParts(model: Model): {BasePart}
+    local parts: {BasePart} = {};
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            table.insert(parts, descendant);
+        end;
+    end;
+    return parts;
+end;
+
+local function setStartLineColor(parts: {BasePart}, color: Color3)
+    for _, part in ipairs(parts) do
+        part.Color = color;
+    end;
+end;
 
 function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
     if initialized then
@@ -32,31 +68,51 @@ function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
     course.Parent = Workspace;
 
     -- =====================================================
-    -- LÍNEA VISIBLE
+    -- LÍNEA VISIBLE (MODELO 3D DE LA TOOLBOX)
     -- =====================================================
-    local startLine = Instance.new("Part");
-    startLine.Name = "StartLine";
-    startLine.Size = Vector3.new(
-        Config.StartLineWidth,
-        0.15,
-        0.5
-    );
+    local startLineParts: {BasePart} = {};
+    local loadSuccess, assetModel = pcall(function()
+        return InsertService:LoadAsset(START_LINE_ASSET_ID);
+    end);
 
-    startLine.Position = Vector3.new(
-        0,
-        0.1,
-        Config.StartLineZ
-    );
+    local startLineModel: Model;
 
-    startLine.Anchored = true;
-    startLine.CanCollide = false;
-    startLine.CanTouch = false;
-    startLine.CanQuery = false;
+    if loadSuccess and assetModel then
+        local firstChild = assetModel:FindFirstChildWhichIsA("Model");
+        if firstChild then
+            startLineModel = firstChild :: Model;
+        else
+            local anyChild = assetModel:GetChildren()[1];
+            if anyChild and anyChild:IsA("Model") then
+                startLineModel = anyChild :: Model;
+            end;
+        end;
 
-    startLine.Material = Enum.Material.Neon;
-    startLine.Color = Color3.fromRGB(255, 230, 70);
+        if startLineModel then
+            configureStartLineModel(startLineModel);
+            startLineModel.Parent = course;
+            startLineParts = getStartLineParts(startLineModel);
+        else
+            warn("[StartLine] No se pudo extraer un Model del asset ID " .. START_LINE_ASSET_ID .. ". Usando fallback.");
+        end;
+    else
+        warn("[StartLine] Error al cargar asset ID " .. START_LINE_ASSET_ID .. ": " .. tostring(assetModel) .. ". Usando fallback.");
+    end;
 
-    startLine.Parent = course;
+    if not startLineModel then
+        local fallback = Instance.new("Part");
+        fallback.Name = "StartLine";
+        fallback.Size = Vector3.new(Config.StartLineWidth, 0.15, 0.5);
+        fallback.Position = Vector3.new(0, 0.1, Config.StartLineZ);
+        fallback.Anchored = true;
+        fallback.CanCollide = false;
+        fallback.CanTouch = false;
+        fallback.CanQuery = false;
+        fallback.Material = Enum.Material.Neon;
+        fallback.Color = Color3.fromRGB(255, 230, 70);
+        fallback.Parent = course;
+        startLineParts = {fallback};
+    end;
 
     -- =====================================================
     -- SENSOR INVISIBLE DE LA LÍNEA
@@ -121,7 +177,7 @@ function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
         startTriggered = true;
         trigger.CanTouch = false;
 
-        startLine.Color = Color3.fromRGB(70, 255, 100);
+        setStartLineColor(startLineParts, Color3.fromRGB(70, 255, 100));
 
         print(
             "[StartLine] Ronda iniciada por "
