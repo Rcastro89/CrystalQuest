@@ -109,6 +109,10 @@ roundStatus.Changed:Connect(function(newStatus)
 				end
 			end
 		end
+	elseif newStatus == "Won" then
+		-- NUEVO: Si ganan, borramos los cristales y enemigos del mapa
+		CrystalService.Reset()
+		EnemyService.Reset()
 	end
 end)
 
