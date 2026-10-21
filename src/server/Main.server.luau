@@ -56,14 +56,14 @@ local function onStartLineCrossed(player: Player): boolean
 	RoundService.Start(totalBlue, totalYellow)
 
 	-- Generar el enemigo y conectar su contacto con la derrota.
-	-- local enemySpawned = EnemyService.SpawnRound(function(touchedPlayer: Player)
-	-- 	warn("[Main] " .. touchedPlayer.Name .. " tocó al enemigo.")
-	-- 	RoundService.Lose()
-	-- end)
+	local enemySpawned = EnemyService.SpawnRound(function(touchedPlayer: Player)
+		warn("[Main] " .. touchedPlayer.Name .. " tocó al enemigo.")
+		RoundService.Lose()
+	end)
 
-	-- if not enemySpawned then
-	-- 	warn("[Main] No se pudo generar el enemigo en esta ronda.")
-	-- end
+	if not enemySpawned then
+		warn("[Main] No se pudo generar el enemigo en esta ronda.")
+	end
 
 	return true
 end
