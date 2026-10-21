@@ -190,7 +190,15 @@ function MapBoundsService.CloseSouthWall(): boolean
 	southWallClosed = true
 
 	local wall = makeWall(bounds, "South")
+    local finalPosition = wall.Position
+    local height = Config.MapBoundsWallHeight or 15
+	wall.Position = Vector3.new(finalPosition.X, -height, finalPosition.Z)
 	wall.Parent = folder
+
+    local TweenService = game:GetService("TweenService")
+	local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween = TweenService:Create(wall, tweenInfo, { Position = finalPosition })
+	tween:Play()
 
 	print("[MapBounds] Pared sur cerrada. Jugador encerrado en el mapa.")
 
