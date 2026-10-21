@@ -373,7 +373,7 @@ function EnemyService.SpawnRound(onEnemyTouched: OnEnemyTouched?): boolean
 	folder.Name = "CrystalQuestEnemies"
 	folder.Parent = Workspace
 
-	for i = 0, 32 do
+	for i = 0, 2 do
 		local position = generateEnemyPosition()
 		if not position then
 			return false
@@ -383,6 +383,18 @@ function EnemyService.SpawnRound(onEnemyTouched: OnEnemyTouched?): boolean
 	end
 
 	return true
+end
+
+-- =========================================================
+-- REINICIAR ENEMIGOS
+-- =========================================================
+function EnemyService.Reset()
+	roundSpawned = false
+	triggered = false
+	local oldFolder = Workspace:FindFirstChild("CrystalQuestEnemies")
+	if oldFolder then
+		oldFolder:Destroy()
+	end
 end
 
 return EnemyService

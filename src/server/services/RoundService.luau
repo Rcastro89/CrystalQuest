@@ -209,4 +209,16 @@ function RoundService.RegisterCrystalCollected(crystalType: CrystalType)
 	end
 end
 
+-- =========================================================
+-- REINICIAR RONDA (PARA REINTENTAR)
+-- =========================================================
+function RoundService.Reset()
+	roundActive = false
+	roundStarted = false
+	status.Value = "Waiting"
+	timeRemaining.Value = 0
+	blueRemaining.Value = 0
+	yellowRemaining.Value = 0
+end
+
 return RoundService

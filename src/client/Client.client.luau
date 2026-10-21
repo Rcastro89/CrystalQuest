@@ -14,6 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local purchaseUpgrade = remotes:WaitForChild("PurchaseUpgrade") :: RemoteFunction
+local retryEvent = remotes:WaitForChild("RetryRound") :: RemoteEvent
 
 -- =========================================================
 -- 1. CREACIÓN DE LA INTERFAZ (HUD SUPERIOR Y BOTONES)
@@ -117,11 +118,11 @@ local function makeButton(name: string, text: string, color: Color3): TextButton
 	button.TextSize = 14
 	button.AutoButtonColor = true
 	button.Parent = shopFrame
-	
+
 	local btnCorner = Instance.new("UICorner")
 	btnCorner.CornerRadius = UDim.new(0, 6)
 	btnCorner.Parent = button
-	
+
 	return button
 end
 
@@ -144,6 +145,57 @@ statusLabel.Text = "¡Recoge todos los cristales azules!"
 statusLabel.Parent = gui
 
 -- =========================================================
+-- NUEVO: PANTALLA DE DERROTA Y BOTÓN REINTENTAR
+-- =========================================================
+local gameOverFrame = Instance.new("Frame")
+gameOverFrame.Name = "GameOverFrame"
+gameOverFrame.Size = UDim2.new(0, 300, 0, 160)
+gameOverFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+gameOverFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+gameOverFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
+gameOverFrame.BackgroundTransparency = 0.1
+gameOverFrame.Visible = false
+gameOverFrame.Parent = gui
+
+local goCorner = Instance.new("UICorner")
+goCorner.CornerRadius = UDim.new(0, 12)
+goCorner.Parent = gameOverFrame
+
+local goStroke = Instance.new("UIStroke")
+goStroke.Color = Color3.fromRGB(255, 70, 70)
+goStroke.Thickness = 3
+goStroke.Parent = gameOverFrame
+
+local goTitle = Instance.new("TextLabel")
+goTitle.Size = UDim2.new(1, 0, 0, 50)
+goTitle.Position = UDim2.new(0, 0, 0, 15)
+goTitle.BackgroundTransparency = 1
+goTitle.Text = "¡HAS MUERTO!"
+goTitle.TextColor3 = Color3.fromRGB(255, 70, 70)
+goTitle.Font = Enum.Font.GothamBold
+goTitle.TextSize = 28
+goTitle.Parent = gameOverFrame
+
+local retryBtn = Instance.new("TextButton")
+retryBtn.Size = UDim2.new(0.8, 0, 0, 45)
+retryBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+retryBtn.BackgroundColor3 = Color3.fromRGB(66, 103, 180)
+retryBtn.Text = "Volver a intentar"
+retryBtn.TextColor3 = Color3.new(1, 1, 1)
+retryBtn.Font = Enum.Font.GothamBold
+retryBtn.TextSize = 18
+retryBtn.Parent = gameOverFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 6)
+btnCorner.Parent = retryBtn
+
+retryBtn.Activated:Connect(function()
+	gameOverFrame.Visible = false
+	retryEvent:FireServer()
+end)
+
+-- =========================================================
 -- 2. VARIABLES DE ESTADO
 -- =========================================================
 local gameState = ReplicatedStorage:WaitForChild("GameState")
@@ -160,6 +212,8 @@ local function updateRoundUI()
 	if roundStatus.Value == "Waiting" then
 		statusLabel.Text = "Cruza la línea de salida para comenzar."
 		statusLabel.TextColor3 = Color3.fromRGB(255, 230, 70)
+		gameOverFrame.Visible = false
+		MapBoundsService.Reset() -- Abre la pared sur de nuevo
 	elseif roundStatus.Value == "Playing" then
 		statusLabel.Text = "¡Recoge todos los cristales!"
 		statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -167,9 +221,11 @@ local function updateRoundUI()
 	elseif roundStatus.Value == "Won" then
 		statusLabel.Text = "¡GANASTE! Has recogido todo."
 		statusLabel.TextColor3 = Color3.fromRGB(70, 255, 100)
+		gameOverFrame.Visible = false
 	elseif roundStatus.Value == "Lost" then
 		statusLabel.Text = "¡PERDISTE! Se acabó el tiempo."
 		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
+		gameOverFrame.Visible = true -- Muestra la pantalla de reintento
 	end
 end
 

@@ -205,4 +205,14 @@ function MapBoundsService.CloseSouthWall(): boolean
 	return true
 end
 
+function MapBoundsService.Reset()
+	local oldFolder = Workspace:FindFirstChild("CrystalQuestBounds")
+	if oldFolder then
+		oldFolder:Destroy()
+	end
+	initialized = false
+	southWallClosed = false
+	MapBoundsService.Initialize()
+end
+
 return MapBoundsService

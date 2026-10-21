@@ -11,6 +11,9 @@ local StartLineService = {}
 local initialized = false
 local startTriggered = false
 
+local activeTrigger: Part? = nil
+local activeStartLineParts: { BasePart } = {}
+
 local START_LINE_ASSET_ID = 2037650641
 
 type OnPlayerCrossed = (Player) -> boolean
@@ -137,6 +140,8 @@ function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
 	trigger.Transparency = 1
 
 	trigger.Parent = course
+	activeTrigger = trigger
+    activeStartLineParts = startLineParts
 
 	-- =====================================================
 	-- DETECCIÓN DEL CRUCE
@@ -189,6 +194,14 @@ function StartLineService.Initialize(onPlayerCrossed: OnPlayerCrossed)
 
 		print("[StartLine] Ronda iniciada por " .. player.Name)
 	end)
+end
+
+function StartLineService.Reset()
+	startTriggered = false
+	if activeTrigger then
+		activeTrigger.CanTouch = true
+	end
+	setStartLineColor(activeStartLineParts, Color3.fromRGB(255, 230, 70)) -- Vuelve a amarillo
 end
 
 return StartLineService

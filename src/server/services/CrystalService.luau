@@ -369,4 +369,15 @@ function CrystalService.SpawnRound(isPlayerReady: IsPlayerReady, onCollected: On
 	return totalBlue, totalYellow
 end
 
+-- =========================================================
+-- REINICIAR CRISTALES
+-- =========================================================
+function CrystalService.Reset()
+	roundSpawned = false
+	local oldFolder = Workspace:FindFirstChild("CrystalQuestCollectibles")
+	if oldFolder then
+		oldFolder:Destroy()
+	end
+end
+
 return CrystalService
