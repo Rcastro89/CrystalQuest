@@ -29,6 +29,11 @@ local function createLeaderstats(player: Player)
 	coins.Name = "Coins"
 	coins.Value = data.Coins
 	coins.Parent = leaderstats
+
+	local score = Instance.new("IntValue")
+	score.Name = "Score"
+	score.Value = 0
+	score.Parent = leaderstats
 end
 
 function PlayerLifecycleService.UpdateLeaderstats(player: Player)

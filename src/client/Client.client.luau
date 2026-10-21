@@ -27,7 +27,7 @@ gui.Parent = playerGui
 -- Contenedor principal superior (Horizontal)
 local topHud = Instance.new("Frame")
 topHud.Name = "TopHud"
-topHud.Size = UDim2.new(0, 500, 0, 60)
+topHud.Size = UDim2.new(0, 680, 0, 60)
 topHud.Position = UDim2.new(0.5, 0, 0, 20)
 topHud.AnchorPoint = Vector2.new(0.5, 0)
 topHud.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
@@ -56,7 +56,7 @@ topLayout.Parent = topHud
 local function createStatBlock(name: string, iconText: string, initialText: string, textColor: Color3): TextLabel
 	local frame = Instance.new("Frame")
 	frame.Name = name .. "Frame"
-	frame.Size = UDim2.new(0, 120, 1, 0)
+	frame.Size = UDim2.new(0, 130, 1, 0)
 	frame.BackgroundTransparency = 1
 	frame.Parent = topHud
 
@@ -75,6 +75,7 @@ end
 
 -- Creación de los textos informativos del HUD
 local objectiveLabel = createStatBlock("ObjectiveLabel", "💎", "0 Cristales", Color3.fromRGB(100, 200, 255))
+local roundScoreLabel = createStatBlock("RoundScoreLabel", "⭐", "-- Pts", Color3.fromRGB(255, 165, 0))
 local timerLabel = createStatBlock("TimerLabel", "⏱️", "0s", Color3.fromRGB(255, 255, 255))
 local coinsLabel = createStatBlock("CoinsLabel", "🪙", "0", Color3.fromRGB(255, 215, 0))
 
@@ -112,15 +113,15 @@ local function makeButton(name: string, text: string, color: Color3): TextButton
 	button.Size = UDim2.new(1, -24, 0, 32)
 	button.BackgroundColor3 = color
 	button.TextColor3 = Color3.new(1, 1, 1)
-	button.Font = Enum.Font.DenkOne
+	button.Font = Enum.Font.GothamBold
 	button.TextSize = 14
 	button.AutoButtonColor = true
 	button.Parent = shopFrame
-
+	
 	local btnCorner = Instance.new("UICorner")
 	btnCorner.CornerRadius = UDim.new(0, 6)
 	btnCorner.Parent = button
-
+	
 	return button
 end
 
@@ -180,7 +181,7 @@ roundStatus.Changed:Connect(updateRoundUI)
 updateRoundUI()
 
 -- =========================================================
--- 3. ACTUALIZACIÓN DEL SALDO (MONEDAS)
+-- 3. ACTUALIZACIÓN DEL SALDO GLOBAL (MONEDAS)
 -- =========================================================
 local leaderstats = player:WaitForChild("leaderstats")
 local coinsValue = leaderstats:WaitForChild("Coins") :: IntValue
@@ -194,7 +195,27 @@ coinsValue:GetPropertyChangedSignal("Value"):Connect(updateCoins)
 updateCoins()
 
 -- =========================================================
--- 4. COMPRA DE LA MEJORA
+-- 4. ACTUALIZACIÓN DE PUNTOS DE LA PARTIDA ACTUAL
+-- =========================================================
+-- Busca 'RoundScore' en GameState, o 'Score' en leaderstats.
+local roundScoreValue = gameState:FindFirstChild("RoundScore") :: IntValue?
+if not roundScoreValue then
+	roundScoreValue = leaderstats:FindFirstChild("Score") :: IntValue?
+end
+
+local function updateRoundScore()
+	if roundScoreValue then
+		roundScoreLabel.Text = "⭐ " .. tostring(roundScoreValue.Value) .. " Pts"
+	end
+end
+
+if roundScoreValue then
+	roundScoreValue.Changed:Connect(updateRoundScore)
+	updateRoundScore()
+end
+
+-- =========================================================
+-- 5. COMPRA DE LA MEJORA
 -- =========================================================
 upgradeButton.Activated:Connect(function()
 	upgradeButton.Active = false
@@ -217,7 +238,7 @@ upgradeButton.Activated:Connect(function()
 end)
 
 -- =========================================================
--- 5. DEVELOPER PRODUCT
+-- 6. DEVELOPER PRODUCT
 -- =========================================================
 productButton.Activated:Connect(function()
 	if Config.CoinPackProductId <= 0 then
@@ -237,7 +258,7 @@ productButton.Activated:Connect(function()
 end)
 
 -- =========================================================
--- 6. GAME PASS
+-- 7. GAME PASS
 -- =========================================================
 passButton.Activated:Connect(function()
 	if Config.GamePassDoubleCoinsId <= 0 then
@@ -257,6 +278,6 @@ passButton.Activated:Connect(function()
 end)
 
 -- =========================================================
--- 7. INICIALIZACIÓN DE LÍMITES DEL MAPA (PAREDES)
+-- 8. INICIALIZACIÓN DE LÍMITES DEL MAPA (PAREDES)
 -- =========================================================
 MapBoundsService.Initialize()

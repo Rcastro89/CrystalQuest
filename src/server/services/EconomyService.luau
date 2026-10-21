@@ -29,6 +29,39 @@ function EconomyService.Initialize(updateLeaderstats: UpdateLeaderstatsCallback)
 end
 
 -- =========================================================
+-- PUNTAJE DE RONDA
+-- =========================================================
+local function getOrCreateScore(player: Player): IntValue?
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then
+		return nil
+	end
+
+	local score = leaderstats:FindFirstChild("Score") :: IntValue?
+	
+    if not score then
+		score = Instance.new("IntValue")
+        if not score then
+            warn("[Economy] No se pudo crear el puntaje de ronda para " .. player.Name)
+            return nil
+        end
+		score.Name = "Score"
+		score.Value = 0
+		score.Parent = leaderstats
+	end
+
+	return score
+end
+
+function EconomyService.ResetRoundScore(player: Player)
+	local score = getOrCreateScore(player)
+
+    if score then
+		score.Value = 0
+	end
+end
+
+-- =========================================================
 -- RECOMPENSA DE UN CRISTAL
 -- =========================================================
 function EconomyService.AwardCrystalReward(player: Player, crystalType: CrystalType)
@@ -85,6 +118,12 @@ function EconomyService.AwardCrystalReward(player: Player, crystalType: CrystalT
 			warn("[Economy] No se pudo agregar el saldo de " .. player.Name)
 			return
 		end
+	end
+
+	-- Sumamos o restamos al puntaje de la partida actual
+	local score = getOrCreateScore(player)
+	if score then
+		score.Value += amount
 	end
 
 	-- Solo actualizamos la UI después de modificar correctamente los datos.
