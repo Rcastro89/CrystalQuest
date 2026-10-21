@@ -119,6 +119,24 @@ function RoundService.IsActive(): boolean
 end;
 
 -- =========================================================
+-- TERMINAR LA RONDA EN DERROTA
+-- =========================================================
+-- Usado por servicios externos (enemigos, fuera de mapa, etc.)
+-- cuando el jugador debe perder inmediatamente.
+function RoundService.Lose()
+    if not roundActive then
+        return;
+    end;
+
+    roundActive = false;
+    roundStarted = false;
+    status.Value = "Lost";
+    timeRemaining.Value = 0;
+
+    print("[Round] Derrota: el jugador perdió por contacto con el enemigo.");
+end;
+
+-- =========================================================
 -- Penalizar tiempo por recolección de cristales rojos
 -- =========================================================
 -- Reduce el tiempo real de la ronda, adelantando la fecha límite.

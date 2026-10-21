@@ -51,6 +51,7 @@ local Config = {
     MonsterAssetId = 11545181738,
     MonsterSizeScale = 1.0,
     MonsterMinDistanceFromOthers = 7,
+    MonsterLostAudioId = "rbxassetid://13407310028",
     -- Límites del mapa (paredes cerradas del corral)
     MapBoundsMargin = 2,
     MapBoundsWallThickness = 1,

@@ -39,7 +39,7 @@ local function onCrystalCollected(
     RoundService.RegisterCrystalCollected(crystalType);
 
     -- La economía gestiona el saldo y los multiplicadores.
-    EconomyService.AwardCrystalReward(player, crystalType)
+    EconomyService.AwardCrystalReward(player, crystalType);
 end;
 
 local function onStartLineCrossed(player: Player): boolean
@@ -58,11 +58,18 @@ local function onStartLineCrossed(player: Player): boolean
         onCrystalCollected
     );
 
-    -- Después, los enemigos de la ronda (independiente).
-    EnemyService.SpawnRound();
-
     -- Después iniciamos el temporizador con las cantidades reales.
     RoundService.Start(totalBlue, totalYellow);
+
+    -- Generar el enemigo y conectar su contacto con la derrota.
+    local enemySpawned = EnemyService.SpawnRound(function(touchedPlayer: Player)
+        warn("[Main] " .. touchedPlayer.Name .. " tocó al enemigo.");
+        RoundService.Lose();
+    end);
+
+    if not enemySpawned then
+        warn("[Main] No se pudo generar el enemigo en esta ronda.");
+    end;
 
     return true;
 end;
