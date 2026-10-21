@@ -210,14 +210,14 @@ local function updateRoundUI()
 	timerLabel.Text = "⏱️ " .. tostring(timeRemaining.Value) .. "s"
 
 	if roundStatus.Value == "Waiting" then
-		statusLabel.Text = "Cruza la línea de salida para comenzar."
+		statusLabel.Text = "Cruza la puerta para comenzar." -- TEXTO ACTUALIZADO
 		statusLabel.TextColor3 = Color3.fromRGB(255, 230, 70)
 		gameOverFrame.Visible = false
-		MapBoundsService.Reset() -- Abre la pared sur de nuevo
+		MapBoundsService.Reset() -- Abre la puerta (reconstruye el mapa)
 	elseif roundStatus.Value == "Playing" then
 		statusLabel.Text = "¡Recoge todos los cristales!"
 		statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-		MapBoundsService.CloseSouthWall()
+		MapBoundsService.CloseDoor() -- FUNCIÓN ACTUALIZADA
 	elseif roundStatus.Value == "Won" then
 		statusLabel.Text = "¡GANASTE! Has recogido todo."
 		statusLabel.TextColor3 = Color3.fromRGB(70, 255, 100)
@@ -225,7 +225,7 @@ local function updateRoundUI()
 	elseif roundStatus.Value == "Lost" then
 		statusLabel.Text = "¡PERDISTE! Se acabó el tiempo."
 		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
-		gameOverFrame.Visible = true -- Muestra la pantalla de reintento
+		gameOverFrame.Visible = true
 	end
 end
 

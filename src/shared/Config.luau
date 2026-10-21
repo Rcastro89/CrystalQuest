@@ -30,11 +30,12 @@ local Config = {
 	-- Persistencia de datos
 	DataStoreName = "CrystalQuest_PlayerData_v1",
 	AutosaveSeconds = 60,
-	-- Línea de salida
+	-- Puerta de entrada
 	StartLineZ = -35,
 	StartLineWidth = 70,
 	StartLineTriggerHeight = 10,
 	StartLineTriggerDepth = 2,
+	DoorWidth = 10, -- NUEVO: Ancho del hueco de la puerta
 	-- Área donde se generan los cristales
 	CrystalMinX = -30,
 	CrystalMaxX = 30,
