@@ -16,113 +16,177 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local purchaseUpgrade = remotes:WaitForChild("PurchaseUpgrade") :: RemoteFunction
 
 -- =========================================================
--- 1. CREACIÓN DE LA INTERFAZ
+-- 1. CREACIÓN DE LA INTERFAZ (HUD SUPERIOR Y BOTONES)
 -- =========================================================
 local gui = Instance.new("ScreenGui")
 gui.Name = "CrystalQuestGui"
 gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
 gui.Parent = playerGui
 
-local panel = Instance.new("Frame")
-panel.Name = "Panel"
-panel.Size = UDim2.fromOffset(320, 320)
-panel.Position = UDim2.fromOffset(20, 20)
-panel.BackgroundColor3 = Color3.fromRGB(32, 38, 52)
-panel.Parent = gui
+-- Contenedor principal superior (Horizontal)
+local topHud = Instance.new("Frame")
+topHud.Name = "TopHud"
+topHud.Size = UDim2.new(0, 500, 0, 60)
+topHud.Position = UDim2.new(0.5, 0, 0, 20)
+topHud.AnchorPoint = Vector2.new(0.5, 0)
+topHud.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
+topHud.BackgroundTransparency = 0.15
+topHud.Parent = gui
 
-local function makeLabel(name: string, text: string, position: UDim2, size: UDim2): TextLabel
+local topHudCorner = Instance.new("UICorner")
+topHudCorner.CornerRadius = UDim.new(0, 12)
+topHudCorner.Parent = topHud
+
+local topHudStroke = Instance.new("UIStroke")
+topHudStroke.Color = Color3.fromRGB(80, 100, 150)
+topHudStroke.Thickness = 2
+topHudStroke.Transparency = 0.5
+topHudStroke.Parent = topHud
+
+-- Layout para organizar los elementos del TopHud
+local topLayout = Instance.new("UIListLayout")
+topLayout.FillDirection = Enum.FillDirection.Horizontal
+topLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+topLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+topLayout.Padding = UDim.new(0, 20)
+topLayout.Parent = topHud
+
+-- Función auxiliar para crear los bloques de datos (Label + Valor)
+local function createStatBlock(name: string, iconText: string, initialText: string, textColor: Color3): TextLabel
+	local frame = Instance.new("Frame")
+	frame.Name = name .. "Frame"
+	frame.Size = UDim2.new(0, 120, 1, 0)
+	frame.BackgroundTransparency = 1
+	frame.Parent = topHud
+
 	local label = Instance.new("TextLabel")
 	label.Name = name
-	label.Text = text
-	label.Position = position
-	label.Size = size
+	label.Text = iconText .. " " .. initialText
+	label.Size = UDim2.new(1, 0, 1, 0)
 	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(0.807843, 0.105882, 0.105882)
+	label.TextColor3 = textColor
 	label.TextScaled = true
-	label.Parent = panel
+	label.Font = Enum.Font.GothamBold
+	label.Parent = frame
 
 	return label
 end
 
-local function makeButton(name: string, text: string, y: number): TextButton
+-- Creación de los textos informativos del HUD
+local objectiveLabel = createStatBlock("ObjectiveLabel", "💎", "0 Cristales", Color3.fromRGB(100, 200, 255))
+local timerLabel = createStatBlock("TimerLabel", "⏱️", "0s", Color3.fromRGB(255, 255, 255))
+local coinsLabel = createStatBlock("CoinsLabel", "🪙", "0", Color3.fromRGB(255, 215, 0))
+
+-- Contenedor inferior derecho para los botones de compra
+local shopFrame = Instance.new("Frame")
+shopFrame.Name = "ShopFrame"
+shopFrame.Size = UDim2.new(0, 200, 0, 140)
+shopFrame.Position = UDim2.new(1, -20, 1, -20)
+shopFrame.AnchorPoint = Vector2.new(1, 1)
+shopFrame.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
+shopFrame.BackgroundTransparency = 0.15
+shopFrame.Parent = gui
+
+local shopCorner = Instance.new("UICorner")
+shopCorner.CornerRadius = UDim.new(0, 12)
+shopCorner.Parent = shopFrame
+
+local shopStroke = Instance.new("UIStroke")
+shopStroke.Color = Color3.fromRGB(80, 100, 150)
+shopStroke.Thickness = 2
+shopStroke.Transparency = 0.5
+shopStroke.Parent = shopFrame
+
+local shopLayout = Instance.new("UIListLayout")
+shopLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+shopLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+shopLayout.Padding = UDim.new(0, 8)
+shopLayout.Parent = shopFrame
+
+-- Función auxiliar para crear botones
+local function makeButton(name: string, text: string, color: Color3): TextButton
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.Text = text
-	button.Position = UDim2.fromOffset(12, y)
-	button.Size = UDim2.new(1, -24, 0, 36)
-	button.BackgroundColor3 = Color3.fromRGB(66, 103, 180)
+	button.Size = UDim2.new(1, -24, 0, 32)
+	button.BackgroundColor3 = color
 	button.TextColor3 = Color3.new(1, 1, 1)
-	button.TextScaled = true
-	button.Parent = panel
+	button.Font = Enum.Font.DenkOne
+	button.TextSize = 14
+	button.AutoButtonColor = true
+	button.Parent = shopFrame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 6)
+	btnCorner.Parent = button
 
 	return button
 end
 
-local objectiveLabel =
-	makeLabel("ObjectiveLabel", "Cristales azules y amarillos: ...", UDim2.fromOffset(12, 8), UDim2.new(1, -24, 0, 28))
+local upgradeButton = makeButton("UpgradeButton", "Mejora x2 (25)", Color3.fromRGB(66, 103, 180))
+local productButton = makeButton("ProductButton", "Comprar 100 🪙", Color3.fromRGB(34, 139, 34))
+local passButton = makeButton("PassButton", "Game Pass x2", Color3.fromRGB(180, 66, 160))
 
-local timerLabel = makeLabel("TimerLabel", "Tiempo: ...", UDim2.fromOffset(12, 36), UDim2.new(1, -24, 0, 34))
+-- Texto de estado (flotante en el centro superior, debajo del HUD)
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusLabel"
+statusLabel.Size = UDim2.new(0, 600, 0, 40)
+statusLabel.Position = UDim2.new(0.5, 0, 0, 90)
+statusLabel.AnchorPoint = Vector2.new(0.5, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 24
+statusLabel.TextStrokeTransparency = 0.5
+statusLabel.Text = "¡Recoge todos los cristales azules!"
+statusLabel.Parent = gui
 
-local coinsLabel = makeLabel("CoinsLabel", "Monedas: ...", UDim2.fromOffset(12, 70), UDim2.new(1, -24, 0, 34))
-local upgradeButton = makeButton("UpgradeButton", "Mejora x2 (25 monedas)", 110)
-
-local productButton = makeButton("ProductButton", "Comprar 100 monedas", 152)
-
-local passButton = makeButton("PassButton", "Comprar Game Pass x2", 194)
-
-local statusLabel = makeLabel(
-	"StatusLabel",
-	"¡Recoge todos los cristales azules!",
-	UDim2.fromOffset(12, 238),
-	UDim2.new(1, -24, 0, 60)
-)
-
+-- =========================================================
+-- 2. VARIABLES DE ESTADO
+-- =========================================================
 local gameState = ReplicatedStorage:WaitForChild("GameState")
 
 local timeRemaining = gameState:WaitForChild("TimeRemaining") :: IntValue
-
 local blueRemaining = gameState:WaitForChild("BlueRemaining") :: IntValue
-
 local yellowRemaining = gameState:WaitForChild("YellowRemaining") :: IntValue
-
 local roundStatus = gameState:WaitForChild("Status") :: StringValue
 
 local function updateRoundUI()
-	print("Actualizando UI de la ronda..." .. timeRemaining.Value)
-	objectiveLabel.Text = "Cristales azules y amarillos: " .. tostring(blueRemaining.Value + yellowRemaining.Value)
-
-	timerLabel.Text = "Tiempo: " .. tostring(timeRemaining.Value)
+	objectiveLabel.Text = "💎 " .. tostring(blueRemaining.Value + yellowRemaining.Value) .. " Cristales"
+	timerLabel.Text = "⏱️ " .. tostring(timeRemaining.Value) .. "s"
 
 	if roundStatus.Value == "Waiting" then
 		statusLabel.Text = "Cruza la línea de salida para comenzar."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 230, 70)
 	elseif roundStatus.Value == "Playing" then
-		statusLabel.Text = "¡Recoge todos los cristales azules y amarillos!"
+		statusLabel.Text = "¡Recoge todos los cristales!"
+		statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
 		MapBoundsService.CloseSouthWall()
 	elseif roundStatus.Value == "Won" then
-		statusLabel.Text = "¡GANASTE! Recogiste todos los cristales azules y amarillos."
+		statusLabel.Text = "¡GANASTE! Has recogido todo."
+		statusLabel.TextColor3 = Color3.fromRGB(70, 255, 100)
 	elseif roundStatus.Value == "Lost" then
 		statusLabel.Text = "¡PERDISTE! Se acabó el tiempo."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 	end
 end
 
 timeRemaining.Changed:Connect(updateRoundUI)
-
 blueRemaining.Changed:Connect(updateRoundUI)
-
 yellowRemaining.Changed:Connect(updateRoundUI)
-
 roundStatus.Changed:Connect(updateRoundUI)
 
 updateRoundUI()
 
 -- =========================================================
--- 2. ACTUALIZACIÓN DEL SALDO
+-- 3. ACTUALIZACIÓN DEL SALDO (MONEDAS)
 -- =========================================================
 local leaderstats = player:WaitForChild("leaderstats")
 local coinsValue = leaderstats:WaitForChild("Coins") :: IntValue
 
 local function updateCoins()
-	coinsLabel.Text = "Monedas: " .. tostring(coinsValue.Value)
+	coinsLabel.Text = "🪙 " .. tostring(coinsValue.Value)
 end
 
 coinsValue:GetPropertyChangedSignal("Value"):Connect(updateCoins)
@@ -130,11 +194,12 @@ coinsValue:GetPropertyChangedSignal("Value"):Connect(updateCoins)
 updateCoins()
 
 -- =========================================================
--- 3. COMPRA DE LA MEJORA
+-- 4. COMPRA DE LA MEJORA
 -- =========================================================
 upgradeButton.Activated:Connect(function()
 	upgradeButton.Active = false
 	statusLabel.Text = "Procesando compra..."
+	statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 	local ok, result = pcall(function()
 		return purchaseUpgrade:InvokeServer("DoublePickup")
@@ -142,19 +207,22 @@ upgradeButton.Activated:Connect(function()
 
 	if ok and type(result) == "table" then
 		statusLabel.Text = tostring(result.message)
+		statusLabel.TextColor3 = Color3.fromRGB(70, 255, 100)
 	else
 		statusLabel.Text = "No se pudo completar la solicitud."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 	end
 
 	upgradeButton.Active = true
 end)
 
 -- =========================================================
--- 4. DEVELOPER PRODUCT
+-- 5. DEVELOPER PRODUCT
 -- =========================================================
 productButton.Activated:Connect(function()
 	if Config.CoinPackProductId <= 0 then
 		statusLabel.Text = "Falta configurar el ID del producto."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 		return
 	end
 
@@ -164,15 +232,17 @@ productButton.Activated:Connect(function()
 
 	if not ok then
 		statusLabel.Text = "No se pudo abrir la compra."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 	end
 end)
 
 -- =========================================================
--- 5. GAME PASS
+-- 6. GAME PASS
 -- =========================================================
 passButton.Activated:Connect(function()
 	if Config.GamePassDoubleCoinsId <= 0 then
 		statusLabel.Text = "Falta configurar el ID del Game Pass."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 		return
 	end
 
@@ -182,10 +252,11 @@ passButton.Activated:Connect(function()
 
 	if not ok then
 		statusLabel.Text = "No se pudo abrir la compra."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
 	end
 end)
 
 -- =========================================================
--- 6. INICIALIZACIÓN DE LÍMITES DEL MAPA (PAREDES)
+-- 7. INICIALIZACIÓN DE LÍMITES DEL MAPA (PAREDES)
 -- =========================================================
 MapBoundsService.Initialize()
