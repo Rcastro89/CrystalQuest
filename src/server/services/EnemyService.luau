@@ -265,7 +265,7 @@ local function createEnemy(
 						if not walkTrack.IsPlaying then
 							walkTrack:Play()
 						end
-                        walkTrack:AdjustSpeed(speed / 8) 
+						walkTrack:AdjustSpeed(speed / 8)
 					else
 						if walkTrack.IsPlaying then
 							walkTrack:Stop()
@@ -373,12 +373,14 @@ function EnemyService.SpawnRound(onEnemyTouched: OnEnemyTouched?): boolean
 	folder.Name = "CrystalQuestEnemies"
 	folder.Parent = Workspace
 
-	local position = generateEnemyPosition()
-	if not position then
-		return false
-	end
+	for i = 0, 32 do
+		local position = generateEnemyPosition()
+		if not position then
+			return false
+		end
 
-	createEnemy(position, folder, onEnemyTouched)
+		createEnemy(position, folder, onEnemyTouched)
+	end
 
 	return true
 end
