@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InsertService = game:GetService("InsertService")
 local Debris = game:GetService("Debris")
+local PathfindingService = game:GetService("PathfindingService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -99,6 +100,70 @@ local function playLostTouchEnemySound(position: Vector3)
 end
 
 -- =========================================================
+-- MOVIMIENTO ALEATORIO DEL ENEMIGO
+-- =========================================================
+local function getRandomPointInMap(): Vector3
+	local x = math.random(Config.CrystalMinX, Config.CrystalMaxX)
+	local z = math.random(Config.CrystalMinZ, Config.CrystalMaxZ)
+	return Vector3.new(x, 1, z)
+end
+
+local function walkToRandomPoint(enemyModel: Model)
+	local humanoid = enemyModel:FindFirstChildOfClass("Humanoid")
+	local rootPart = enemyModel:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not humanoid or not rootPart then
+		return
+	end
+
+	if humanoid.Health <= 0 then
+		return
+	end
+
+	local targetPos = getRandomPointInMap()
+
+	local path = PathfindingService:CreatePath({
+		AgentRadius = 2,
+		AgentHeight = 5,
+		AgentCanJump = false,
+		WaypointSpacing = 4,
+	})
+
+	local success = pcall(function()
+		path:ComputeAsync(rootPart.Position, targetPos)
+	end)
+
+	if not success or path.Status ~= Enum.PathStatus.Success then
+		return
+	end
+
+	local waypoints = path:GetWaypoints()
+	for i, waypoint in ipairs(waypoints) do
+		if i == 1 then
+			continue
+		end
+		if not enemyModel.Parent then
+			return
+		end
+		humanoid:MoveTo(waypoint.Position)
+
+		local finished = false
+		local conn = humanoid.MoveToFinished:Connect(function()
+			finished = true
+		end)
+
+		local timeoutAt = os.clock() + 2
+		while not finished and os.clock() < timeoutAt and enemyModel.Parent do
+			task.wait(0.1)
+		end
+		conn:Disconnect()
+
+		if not finished then
+			return
+		end
+	end
+end
+
+-- =========================================================
 -- CREACIÓN DEL ENEMIGO (SÓLIDO, PROVOCA DERROTA SI TOCAS)
 -- =========================================================
 local function createEnemy(
@@ -155,7 +220,7 @@ local function createEnemy(
 
 	for _, descendant in ipairs(displayModel:GetDescendants()) do
 		if descendant:IsA("BasePart") then
-			descendant.Anchored = true
+			descendant.Anchored = false
 			descendant.CanCollide = true
 			descendant.CanTouch = true
 			descendant.CanQuery = true
@@ -176,26 +241,38 @@ local function createEnemy(
 		elseif descendant:IsA("BaseScript") then
 			descendant.Disabled = true
 		elseif descendant:IsA("Animator") then
-			local okAnim, _ = pcall(function()
-				descendant:Destroy()
-			end)
-			_ = okAnim
+			-- Se conserva el Animator para que el Humanoid tenga animación de caminar.
 		elseif descendant:IsA("Humanoid") then
-			-- descendant.MaxHealth = 100;
-			-- descendant.Health = 100;
-			-- descendant.WalkSpeed = 0;
-			-- descendant.JumpPower = 0;
-			-- descendant.PlatformStand = true;
-			-- descendant.AutoRotate = false;
-			-- descendant:SetStateEnabled(Enum.HumanoidStateType.Running, false);
-			-- descendant:SetStateEnabled(Enum.HumanoidStateType.Jumping, false);
-			-- descendant:SetStateEnabled(Enum.HumanoidStateType.Freefall, false);
-			-- descendant:SetStateEnabled(Enum.HumanoidStateType.Dead, false);
-			-- descendant:SetStateEnabled(Enum.HumanoidStateType.Physics, false);
-			local okHum, _ = pcall(function()
-				descendant:Destroy()
-			end)
-			_ = okHum
+			descendant.MaxHealth = 100
+			descendant.Health = 100
+			descendant.WalkSpeed = 8
+			descendant.JumpPower = 0
+			descendant.PlatformStand = false
+			descendant.AutoRotate = true
+
+			-- Configurar animación de caminar manualmente,
+			-- porque el script Animate del modelo no corre en el servidor.
+			local animator = descendant:FindFirstChildOfClass("Animator")
+			if animator then
+				local walkAnim = Instance.new("Animation")
+				walkAnim.AnimationId = "rbxassetid://507777826"
+				local walkTrack = animator:LoadAnimation(walkAnim)
+				walkTrack.Looped = true
+				walkTrack.Priority = Enum.AnimationPriority.Movement
+
+				descendant.Running:Connect(function(speed)
+					if speed > 0.5 then
+						if not walkTrack.IsPlaying then
+							walkTrack:Play()
+						end
+                        walkTrack:AdjustSpeed(speed / 8) 
+					else
+						if walkTrack.IsPlaying then
+							walkTrack:Stop()
+						end
+					end
+				end)
+			end
 		end
 	end
 
@@ -253,6 +330,14 @@ local function createEnemy(
 	end
 
 	displayModel.Parent = parentFolder
+
+	task.spawn(function()
+		task.wait(1)
+		while displayModel.Parent and roundSpawned do
+			walkToRandomPoint(displayModel)
+			task.wait(math.random(2, 5))
+		end
+	end)
 
 	print(
 		"[EnemyService] Enemigo colocado en ("
