@@ -35,7 +35,10 @@ local Config = {
 	StartLineWidth = 70,
 	StartLineTriggerHeight = 10,
 	StartLineTriggerDepth = 2,
-	DoorWidth = 10, -- NUEVO: Ancho del hueco de la puerta
+	DoorWidth = 10, -- Ancho del hueco de la puerta
+	DoorAssetId = 482135166, -- NUEVO: Pon aquí el ID de tu modelo de puerta
+	DoorOpenDuration = 0.5, -- Segundos que tarda en abrir/cerrar
+	DoorOpenDistance = 8, -- Distancia a la que el jugador hace que se abra
 	-- Área donde se generan los cristales
 	CrystalMinX = -30,
 	CrystalMaxX = 30,

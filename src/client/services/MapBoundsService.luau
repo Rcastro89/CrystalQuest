@@ -1,16 +1,12 @@
 --!strict
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local MapBoundsService = {}
 
 local initialized = false
-local doorClosed = false
-local cachedBounds: ComputedBounds? = nil
-local cachedFolder: Folder? = nil
 
 type WallOrientation = "North" | "South" | "East" | "West"
 
@@ -91,13 +87,11 @@ local function makeWallParts(bounds: ComputedBounds, orientation: string): { Par
 		local doorWidth = Config.DoorWidth or 10
 		local sideWidth = (bounds.width - doorWidth) / 2
 
-		-- Pared izquierda de la puerta
 		createWallPart(
 			Vector3.new(sideWidth, height, thickness),
 			Vector3.new(bounds.minX + sideWidth / 2, halfHeight, bounds.minZ - halfThick),
 			"MapBoundary_South_Left"
 		)
-		-- Pared derecha de la puerta
 		createWallPart(
 			Vector3.new(sideWidth, height, thickness),
 			Vector3.new(bounds.maxX - sideWidth / 2, halfHeight, bounds.minZ - halfThick),
@@ -142,13 +136,9 @@ function MapBoundsService.Initialize(): boolean
 	folder.Name = "CrystalQuestBounds"
 	folder.Parent = Workspace
 
-	cachedBounds = bounds
-	cachedFolder = folder
-	doorClosed = false
-
 	local orientations = {
 		"North" :: WallOrientation,
-		"South" :: WallOrientation, -- Ahora se crea con un hueco
+		"South" :: WallOrientation,
 		"East" :: WallOrientation,
 		"West" :: WallOrientation,
 	}
@@ -164,51 +154,12 @@ function MapBoundsService.Initialize(): boolean
 	return true
 end
 
-function MapBoundsService.CloseDoor(): boolean
-	if not initialized or doorClosed then
-		return false
-	end
-	local bounds = cachedBounds
-	local folder = cachedFolder
-	if not bounds or not folder or not folder.Parent then
-		return false
-	end
-
-	doorClosed = true
-
-	local thickness = Config.MapBoundsWallThickness or 1
-	local height = Config.MapBoundsWallHeight or 15
-	local halfHeight = height / 2
-	local halfThick = thickness / 2
-	local doorWidth = Config.DoorWidth or 10
-
-	local door = Instance.new("Part")
-	door.Name = "MapBoundary_Door"
-	door.Size = Vector3.new(doorWidth, height, thickness)
-	door.Position = Vector3.new(bounds.centerX, halfHeight, bounds.minZ - halfThick)
-	door.Anchored = true
-	door.CanCollide = true
-	door.Material = Config.MapBoundsWallMaterial or Enum.Material.Concrete
-	door.Color = Config.MapBoundsWallColor or Color3.fromRGB(80, 90, 120)
-
-	local finalPosition = door.Position
-	door.Position = Vector3.new(finalPosition.X, -height, finalPosition.Z)
-	door.Parent = folder
-
-	local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(door, tweenInfo, { Position = finalPosition }):Play()
-
-	print("[MapBounds] Puerta cerrada. Jugador encerrado.")
-	return true
-end
-
 function MapBoundsService.Reset()
 	local oldFolder = Workspace:FindFirstChild("CrystalQuestBounds")
 	if oldFolder then
 		oldFolder:Destroy()
 	end
 	initialized = false
-	doorClosed = false
 	MapBoundsService.Initialize()
 end
 

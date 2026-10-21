@@ -217,7 +217,6 @@ local function updateRoundUI()
 	elseif roundStatus.Value == "Playing" then
 		statusLabel.Text = "¡Recoge todos los cristales!"
 		statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-		MapBoundsService.CloseDoor() -- FUNCIÓN ACTUALIZADA
 	elseif roundStatus.Value == "Won" then
 		statusLabel.Text = "¡GANASTE! Has recogido todo."
 		statusLabel.TextColor3 = Color3.fromRGB(70, 255, 100)
